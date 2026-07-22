@@ -1,21 +1,20 @@
-// Стабильная логика бесконечной ленты с автоплеем и контролем звука для iOS
+// Стабильная лента с автоплеем, контролем звука и сохранением видео в Base64 для iPhone
 const fileInput = document.getElementById('video-upload-input');
 const profileGrid = document.getElementById('profile-grid');
 const feedContainer = document.getElementById('video-feed');
 
-// Загружаем сохраненное состояние, если оно есть, иначе пустой массив
+// Загружаем сохраненную ленту из LocalStorage
 export let uploadedVideos = JSON.parse(localStorage.getItem('tyk_tyk_videos_state')) || [];
 export let activeVideoIndex = 0;
-// Глобальный флаг: включил ли пользователь звук вообще в этой сессии
 let isSoundGloballyEnabled = false;
 
 document.addEventListener("DOMContentLoaded", () => {
     initFeed();
     setupUpload();
     setupAutoplayObserver();
-    setupVideoTaps(); // Подключаем обработку тапов по экрану (звук / пауза)
+    setupVideoTaps();
     
-    // Если в памяти уже были видео, перерисуем и сетку профиля
+    // Восстанавливаем сетку профиля из сохраненных Base64 данных
     if (uploadedVideos.length > 0 && profileGrid) {
         const emptyMsg = document.getElementById('grid-empty-msg');
         if (emptyMsg) emptyMsg.remove();
@@ -26,7 +25,7 @@ document.addEventListener("DOMContentLoaded", () => {
     }
 });
 
-// Инициализация ленты
+// Отрисовка карточек ленты
 export function initFeed() {
     if (!feedContainer) return;
     feedContainer.innerHTML = "";
@@ -80,40 +79,47 @@ export function initFeed() {
         feedContainer.appendChild(card);
     });
 }
+// Изменено: Используем FileReader для перевода видео в вечную Base64 строку
 function setupUpload() {
     if (!fileInput) return;
     
     fileInput.addEventListener('change', function() {
         const file = this.files[0];
         if (file) {
-            const videoURL = URL.createObjectURL(file);
-            const currentTag = document.querySelector('.profile-tag') ? document.querySelector('.profile-tag').innerText : "@dimka_0770";
+            const reader = new FileReader();
             
-            const newVideo = {
-                id: Date.now().toString(),
-                url: videoURL,
-                author: currentTag,
-                description: `Ролик #${uploadedVideos.length + 1} в ленте! 🔥`,
-                likes: 0,
-                isLiked: false,
-                comments: []
+            reader.onload = function(event) {
+                const base64Video = event.target.result;
+                const currentTag = document.querySelector('.profile-tag') ? document.querySelector('.profile-tag').innerText : "@dimka_0770";
+                
+                const newVideo = {
+                    id: Date.now().toString(),
+                    url: base64Video, // Теперь тут хранится вечный код видео
+                    author: currentTag,
+                    description: `Ролик #${uploadedVideos.length + 1} в ленте! 🔥`,
+                    likes: 0,
+                    isLiked: false,
+                    comments: []
+                };
+                
+                uploadedVideos.push(newVideo);
+                localStorage.setItem('tyk_tyk_videos_state', JSON.stringify(uploadedVideos));
+                
+                initFeed();
+
+                const emptyMsg = document.getElementById('grid-empty-msg');
+                if (emptyMsg) emptyMsg.remove();
+
+                createProfileGridItem(base64Video, uploadedVideos.length - 1);
+
+                const newIndex = uploadedVideos.length - 1;
+                setTimeout(() => playVideoAtIndex(newIndex), 300);
+
+                const btnHome = document.getElementById('btn-home');
+                if (btnHome) btnHome.click();
             };
             
-            uploadedVideos.push(newVideo);
-            localStorage.setItem('tyk_tyk_videos_state', JSON.stringify(uploadedVideos));
-            
-            initFeed();
-
-            const emptyMsg = document.getElementById('grid-empty-msg');
-            if (emptyMsg) emptyMsg.remove();
-
-            createProfileGridItem(videoURL, uploadedVideos.length - 1);
-
-            const newIndex = uploadedVideos.length - 1;
-            setTimeout(() => playVideoAtIndex(newIndex), 300);
-
-            const btnHome = document.getElementById('btn-home');
-            if (btnHome) btnHome.click();
+            reader.readAsDataURL(file); // Запуск конвертации видео файла
         }
     });
 }
@@ -223,7 +229,6 @@ function setupVideoTaps() {
                     if (video.muted) {
                         video.muted = false;
                         isSoundGloballyEnabled = true;
-                        console.log("Звук включен пользователем");
                     } else {
                         if (video.paused) {
                             video.play().catch(() => {});

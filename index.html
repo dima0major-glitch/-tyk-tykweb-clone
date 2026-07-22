@@ -115,8 +115,37 @@
     </div>
 
     <!-- ПОДКЛЮЧАЕМ СЦЕНАРИИ -->
-    <script src="./app.js"></script>
+ 
+       <!-- ================= ВСПЛЫВАЮЩЕЕ ОКНО РЕДАКТИРОВАНИЯ ================= -->
+    <div id="edit-profile-modal" class="modal-overlay hidden">
+        <div class="modal-content">
+            <h3 class="modal-title">Редактировать профиль</h3>
+            
+            <div class="input-group">
+                <label>Имя</label>
+                <input type="text" id="input-name" placeholder="Введите имя">
+            </div>
+            
+            <div class="input-group">
+                <label>Имя пользователя (тег)</label>
+                <input type="text" id="input-tag" placeholder="Введите тег">
+            </div>
+            
+            <div class="input-group">
+                <label>Эмодзи аватарки</label>
+                <input type="text" id="input-avatar" placeholder="Например: 🔥 или 👑" maxlength="2">
+            </div>
+            
+            <div class="modal-buttons">
+                <button class="modal-btn cancel" id="btn-modal-cancel">Отмена</button>
+                <button class="modal-btn save" id="btn-modal-save">Сохранить</button>
+            </div>
+        </div>
+    </div>
+ <script src="./app.js"></script>
     <script src="./profile.js"></script>
     <script src="./likes.js"></script>
+    <script src="./edit-profile.js"></script>
+
 </body>
 </html>

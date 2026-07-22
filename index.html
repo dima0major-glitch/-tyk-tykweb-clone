@@ -31,7 +31,8 @@
                     <div class="button-icon">❤️</div>
                     <span class="count" id="like-count">0</span>
                 </div>
-                <div class="button-item" onclick="alert('Комментарии в разработке!')">
+                <!-- Исправленная кнопка для открытия шторки комментариев -->
+                <div class="button-item" id="btn-comments-open">
                     <div class="button-icon">💬</div>
                     <span class="count">0</span>
                 </div>
@@ -115,6 +116,31 @@
         </div>
     </div>
 
+    <!-- ================= ШТОРКА КОММЕНТАРИЕВ (TIKTOK STYLE) ================= -->
+    <div id="comments-sheet" class="comments-overlay hidden">
+        <div class="comments-content">
+            <!-- Шапка шторки с кнопкой закрытия -->
+            <div class="comments-header">
+                <span>Комментарии (<span id="comments-count-title">0</span>)</span>
+                <button id="btn-comments-close">✕</button>
+            </div>
+            
+            <!-- Список самих комментариев -->
+            <div class="comments-list" id="comments-list-box">
+                <!-- Если комментов нет, покажем заглушку -->
+                <div class="no-comments-msg" id="comments-empty-msg">
+                    Будьте первым, кто оставит комментарий! 💬
+                </div>
+            </div>
+            
+            <!-- Поле ввода внизу шторки -->
+            <div class="comments-input-area">
+                <input type="text" id="input-comment-text" placeholder="Добавить комментарий...">
+                <button id="btn-comment-send">▲</button>
+            </div>
+        </div>
+    </div>
+
     <!-- ================= НИЖНЕЕ МЕНЮ НАВИГАЦИИ ================= -->
     <div class="bottom-nav">
         <div class="nav-item active" id="btn-home">
@@ -149,5 +175,6 @@
     <script src="./profile.js"></script>
     <script src="./likes.js"></script>
     <script src="./edit-profile.js"></script>
+    <script src="./comments.js"></script>
 </body>
 </html>

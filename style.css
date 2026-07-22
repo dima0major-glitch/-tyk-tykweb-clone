@@ -373,3 +373,150 @@ video {
     background: linear-gradient(90deg, #00f2fe 0%, #4facfe 100%);
     color: #000;
 }
+/* --- СТИЛИ ДЛЯ ВЫЕЗЖАЮЩЕЙ ШТОРКИ КОММЕНТАРИЕВ --- */
+.comments-overlay {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background: rgba(0, 0, 0, 0.5);
+    z-index: 150;
+    display: flex;
+    align-items: flex-end; /* Прижимаем шторку к низу экрана */
+}
+
+.comments-content {
+    background: #1c1c1e;
+    width: 100%;
+    height: 65vh; /* Шторка занимает 65% высоты экрана смартфона */
+    border-radius: 16px 16px 0 0; /* Округляем только верхние углы */
+    display: flex;
+    flex-direction: column;
+    padding-bottom: env(safe-area-inset-bottom); /* Учитываем нижнюю челку iPhone */
+    animation: slideUpComments 0.3s cubic-bezier(0.1, 0.76, 0.55, 0.94) forwards;
+    border-top: 0.5px solid #262626;
+}
+
+@keyframes slideUpComments {
+    from { transform: translateY(100%); }
+    to { transform: translateY(0); }
+}
+
+.comments-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 16px;
+    border-bottom: 0.5px solid #262626;
+    color: #fff;
+    font-family: sans-serif;
+    font-size: 14px;
+    font-weight: 700;
+}
+
+.comments-header button {
+    background: transparent;
+    border: none;
+    color: #8a8a8f;
+    font-size: 18px;
+    cursor: pointer;
+}
+
+.comments-list {
+    flex: 1;
+    overflow-y: auto; /* Включаем прокрутку, если комментов много */
+    padding: 16px;
+    display: flex;
+    flex-direction: column;
+    gap: 16px;
+    -webkit-overflow-scrolling: touch;
+}
+
+.no-comments-msg {
+    color: #8a8a8f;
+    text-align: center;
+    font-size: 14px;
+    margin-top: 40px;
+    font-family: sans-serif;
+}
+
+/* Стиль одного блока комментария */
+.comment-item-block {
+    display: flex;
+    gap: 12px;
+    color: #fff;
+    font-family: sans-serif;
+    animation: fadeInComment 0.2s ease;
+}
+
+@keyframes fadeInComment {
+    from { opacity: 0; transform: translateY(5px); }
+    to { opacity: 1; transform: translateY(0); }
+}
+
+.comment-avatar {
+    width: 32px;
+    height: 32px;
+    border-radius: 50%;
+    background: #3a3a3c;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 16px;
+}
+
+.comment-text-wrap {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+}
+
+.comment-user {
+    font-size: 12px;
+    font-weight: 700;
+    color: #8a8a8f;
+}
+
+.comment-text-content {
+    font-size: 14px;
+    line-height: 1.4;
+    word-break: break-word;
+}
+
+/* Поле ввода в самом низу шторки */
+.comments-input-area {
+    display: flex;
+    padding: 12px 16px;
+    border-top: 0.5px solid #262626;
+    background: #1c1c1e;
+    gap: 12px;
+    align-items: center;
+}
+
+.comments-input-area input {
+    flex: 1;
+    background: #262626;
+    border: none;
+    border-radius: 20px;
+    padding: 10px 16px;
+    color: #fff;
+    font-size: 14px;
+    outline: none;
+    -webkit-user-select: text;
+    user-select: text;
+}
+
+.comments-input-area button {
+    width: 32px;
+    height: 32px;
+    border-radius: 50%;
+    background: #00f2fe;
+    border: none;
+    color: #000;
+    font-size: 14px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+}

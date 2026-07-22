@@ -1,4 +1,4 @@
-// Логика комментариев с интеграцией LocalStorage (память твоего iPhone)
+// Логика комментариев с интеграцией Живой Облачной Базы данных (Firebase Firestore)
 
 const btnCommentsOpen = document.getElementById('btn-comments-open');
 const btnCommentsClose = document.getElementById('btn-comments-close');
@@ -17,34 +17,31 @@ commentsSheet.addEventListener('click', (e) => {
     if (e.target === commentsSheet) commentsSheet.classList.add('hidden');
 });
 
-// 2. ОТПРАВКА И СОХРАНЕНИЕ КОММЕНТАРИЯ В ПАМЯТЬ ТЕЛЕФОНА
-function sendNewComment() {
+// 2. ОТПРАВКА КОММЕНТАРИЯ В ОБЛАКО FIREBASE
+async function sendNewComment() {
     const text = inputCommentText.value.trim();
     if (text === "") return;
 
-    const currentUsername = document.querySelector('.profile-tag') ? document.querySelector('.profile-tag').innerText : "@dima0major";
-    const currentAvatar = document.querySelector('.profile-avatar') ? document.querySelector('.profile-avatar').innerText : "😎";
+    // Берем текущий ник и аватарку прямо с экрана профиля
+    const currentUsername = document.querySelector('.profile-tag').innerText;
+    const currentAvatar = document.querySelector('.profile-avatar').innerText;
 
-    // Создаем объект нового комментария
-    const newComment = {
-        username: currentUsername,
-        avatar: currentAvatar,
-        text: text
-    };
-
-    // Достаем уже сохраненные комменты из памяти телефона (или создаем пустой массив, если их нет)
-    let savedComments = JSON.parse(localStorage.getItem('tyk_tyk_comments')) || [];
-    
-    // Добавляем наш новый коммент в самое начало списка
-    savedComments.unshift(newComment);
-
-    // Записываем обновленный список обратно в память Айфона
-    localStorage.setItem('tyk_tyk_comments', JSON.stringify(savedComments));
-
-    inputCommentText.value = ""; // Очищаем поле ввода
-
-    // Перерисовываем список на экране
-    renderComments();
+    try {
+        if (window.db && window.fbCollection && window.fbAddDoc) {
+            // Отправляем объект в коллекцию "comments" в облако Firebase
+            await window.fbAddDoc(window.fbCollection(window.db, "comments"), {
+                username: currentUsername,
+                avatar: currentAvatar,
+                text: text,
+                createdAt: new Date().getTime() // Время для правильной сортировки
+            });
+            inputCommentText.value = ""; // Очищаем поле после отправки
+        } else {
+            console.error("Firebase еще не инициализирован. Проверь подключение скриптов.");
+        }
+    } catch (error) {
+        console.error("Ошибка при отправке в Firebase:", error);
+    }
 }
 
 btnCommentSend.addEventListener('click', sendNewComment);
@@ -52,41 +49,52 @@ inputCommentText.addEventListener('keydown', (e) => {
     if (e.key === 'Enter') sendNewComment();
 });
 
-// 3. ФУНКЦИЯ ОТРИСОВКИ КОММЕНТАРИЕВ НА ЭКРАНЕ
-function renderComments() {
-    // Снова достаем список из памяти
-    const savedComments = JSON.parse(localStorage.getItem('tyk_tyk_comments')) || [];
-    
-    // Очищаем шторку перед выводом
-    commentsListBox.innerHTML = "";
-    
-    // Отрисовываем каждый коммент
-    savedComments.forEach((data) => {
-        const commentItem = document.createElement('div');
-        commentItem.className = 'comment-item-block';
-        commentItem.innerHTML = `
-            <div class="comment-avatar">${data.avatar || '😎'}</div>
-            <div class="comment-text-wrap">
-                <span class="comment-user">${data.username || '@user'}</span>
-                <span class="comment-text-content">${data.text}</span>
-            </div>
-        `;
-        commentsListBox.appendChild(commentItem);
-    });
-
-    // Если комментариев вообще нет — возвращаем красивую заглушку
-    if (savedComments.length === 0) {
-        commentsListBox.innerHTML = `
-            <div class="no-comments-msg" id="comments-empty-msg">
-                Будьте первым, кто оставит комментарий! 💬
-            </div>
-        `;
+// 3. ЖИВОЕ СЛУШАНИЕ И ОБНОВЛЕНИЕ КОММЕНТАРИЕВ С СЕРВЕРА GOOGLE
+function listenToComments() {
+    if (!window.db || !window.fbCollection || !window.fbOnSnapshot || !window.fbQuery || !window.fbOrderBy) {
+        // Если Firebase грузится чуть дольше, перезапустим проверку через 200 миллисекунд
+        setTimeout(listenToComments, 200);
+        return;
     }
 
-    // Обновляем циферки счетчиков на кнопке и в шапке шторки
-    if (titleCommentCount) titleCommentCount.innerText = savedComments.length;
-    if (rightBarCommentCount) rightBarCommentCount.innerText = savedComments.length;
+    // Создаем запрос к коллекции "comments" со сортировкой от новых к старым
+    const q = window.fbQuery(window.fbCollection(window.db, "comments"), window.fbOrderBy("createdAt", "desc"));
+
+    // Запускаем живого слушателя облака
+    window.fbOnSnapshot(q, (snapshot) => {
+        commentsListBox.innerHTML = "";
+        let counter = 0;
+
+        snapshot.forEach((doc) => {
+            const data = doc.data();
+            counter++;
+
+            const commentItem = document.createElement('div');
+            commentItem.className = 'comment-item-block';
+            commentItem.innerHTML = `
+                <div class="comment-avatar">${data.avatar || '😎'}</div>
+                <div class="comment-text-wrap">
+                    <span class="comment-user">${data.username || '@user'}</span>
+                    <span class="comment-text-content">${data.text}</span>
+                </div>
+            `;
+            commentsListBox.appendChild(commentItem);
+        });
+
+        // Если комментариев в базе нет — показываем заглушку
+        if (counter === 0) {
+            commentsListBox.innerHTML = `
+                <div class="no-comments-msg" id="comments-empty-msg">
+                    Будьте первым, кто оставит комментарий! 💬
+                </div>
+            `;
+        }
+
+        // Обновляем циферки счетчиков на кнопке и в шторке
+        if (titleCommentCount) titleCommentCount.innerText = counter;
+        if (rightBarCommentCount) rightBarCommentCount.innerText = counter;
+    });
 }
 
-// Запускаем отрисовку сохраненных комментов сразу при загрузке сайта
-renderComments();
+// Запускаем процесс живого отслеживания базы
+listenToComments();

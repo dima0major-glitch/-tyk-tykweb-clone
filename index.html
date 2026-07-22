@@ -14,8 +14,8 @@
         
         <!-- РОЛИК 1 -->
         <div class="video-card">
-            <!-- Стабильная тестовая ссылка на видео (природа/горы) -->
-            <video src="https://googleapis.com" loop playsinline autoplay muted></video>
+            <!-- Официальный тестовый поток Apple (Пляж) -->
+            <video src="https://apple.com" loop playsinline autoplay muted></video>
             
             <div class="action-buttons">
                 <div class="button-item" onclick="toggleLike(this)">
@@ -34,14 +34,14 @@
 
             <div class="video-sidebar">
                 <div class="username">@dima0major</div>
-                <div class="description">Тестируем новые ссылки! Нажми на экран, чтобы пошло видео со звуком 🔊 #coding #tyktyk</div>
+                <div class="description">Тестируем официальные видео от Apple! Тапни по экрану, чтобы включить звук 🔊 #coding #tyktyk</div>
             </div>
         </div>
 
         <!-- РОЛИК 2 -->
         <div class="video-card">
-            <!-- Вторая стабильная ссылка (анимация с кроликом) -->
-            <video src="https://googleapis.com" loop playsinline muted></video>
+            <!-- Второй официальный тестовый поток Apple -->
+            <video src="https://apple.com" loop playsinline muted></video>
             
             <div class="action-buttons">
                 <div class="button-item" onclick="toggleLike(this)">
@@ -60,7 +60,7 @@
 
             <div class="video-sidebar">
                 <div class="username">@it_developer</div>
-                <div class="description">Свайпни вверх или вниз, чтобы переключить ролик! 🔥</div>
+                <div class="description">Свайпни вверх или вниз, чтобы проверить переключение роликов! 🔥</div>
             </div>
         </div>
 
@@ -110,10 +110,10 @@
         videos.forEach(video => {
             video.addEventListener('click', () => {
                 if (video.muted) {
-                    video.muted = false; // Отключаем беззвучный режим на iOS при первом тапе
+                    video.muted = false; // Убираем беззвучный режим на iOS при первом тапе
                 }
                 if (video.paused) {
-                    video.play();
+                    video.play().catch(err => console.log("Ошибка воспроизведения:", err));
                 } else {
                     video.pause();
                 }

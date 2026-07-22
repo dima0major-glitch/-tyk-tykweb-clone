@@ -1,5 +1,4 @@
-import { uploadedVideos, activeVideoIndex, initFeed } from './app.js';
-
+// Автономная логика навигации профиля без ломающих импортов
 document.addEventListener("DOMContentLoaded", () => {
     setupNavigation();
     setupProfileTabs();
@@ -19,8 +18,9 @@ function setupNavigation() {
             feedScreen.classList.remove("hidden");
             profileScreen.classList.add("hidden");
             
-            // Запускаем видео на текущем индексе при возврате на главную
-            const activeCard = document.querySelector(`#video-feed .video-card[data-index="${activeVideoIndex}"] video`);
+            // Возобновляем видео на текущем сохраненном индексе
+            const index = window.activeVideoIndex || 0;
+            const activeCard = document.querySelector(`#video-feed .video-card[data-index="${index}"] video`);
             if (activeCard) {
                 activeCard.play().catch(() => {});
             }
@@ -33,7 +33,7 @@ function setupNavigation() {
             profileScreen.classList.remove("hidden");
             feedScreen.classList.add("hidden");
 
-            // Ставим на паузу все ролики из ленты
+            // Замораживаем все плееры ленты, пока юзер в профиле
             document.querySelectorAll("#video-feed video").forEach(v => v.pause());
         });
     }

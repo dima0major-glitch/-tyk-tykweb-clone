@@ -1,18 +1,17 @@
-// Логика бесконечной свайп-ленты на базе облачного хранилища Supabase
+// Чистый автономный модуль ленты Supabase без ломающих импортов
 const fileInput = document.getElementById('video-upload-input');
 const profileGrid = document.getElementById('profile-grid');
 const feedContainer = document.getElementById('video-feed');
 
-export let uploadedVideos = [];
-export let activeVideoIndex = 0;
+window.uploadedVideos = [];
+window.activeVideoIndex = 0;
 let isSoundGloballyEnabled = false;
 
 document.addEventListener("DOMContentLoaded", () => {
-    // Каждую секунду проверяем, загрузился ли конфиг Supabase
     const checkSupabase = setInterval(() => {
         if (window.supabase) {
             clearInterval(checkSupabase);
-            listenToCloudFeed(); // Запускаем стриминг ленты из облака
+            listenToCloudFeed(); 
         }
     }, 100);
 
@@ -21,11 +20,9 @@ document.addEventListener("DOMContentLoaded", () => {
     setupVideoTaps();
 });
 
-// Стриминг видеороликов из базы данных Supabase в реальном времени
 async function listenToCloudFeed() {
     if (!window.supabase) return;
 
-    // Запрашиваем список всех видео, сортируя по дате добавления (новые сверху)
     const { data, error } = await window.supabase
         .from('videos')
         .select('*')
@@ -36,17 +33,17 @@ async function listenToCloudFeed() {
         return;
     }
 
-    uploadedVideos = data || [];
+    window.uploadedVideos = data || [];
     initFeed();
     updateProfileGrid();
 }
 
 // Отрисовка карточек ленты из прямых веб-ссылок Supabase
-export function initFeed() {
+function initFeed() {
     if (!feedContainer) return;
     feedContainer.innerHTML = "";
 
-    if (uploadedVideos.length === 0) {
+    if (window.uploadedVideos.length === 0) {
         feedContainer.innerHTML = `
             <div class="no-video-msg" id="upload-hint" style="display: flex; flex-direction: column; align-items: center; justify-content: center; height: 100%; text-align: center; padding: 20px; color: #fff;">
                 <h3>Лента пуста ☁️</h3>
@@ -57,7 +54,7 @@ export function initFeed() {
         return;
     }
 
-    uploadedVideos.forEach((video, index) => {
+    window.uploadedVideos.forEach((video, index) => {
         const card = document.createElement("div");
         card.className = "video-card";
         card.setAttribute("data-index", index);
@@ -95,7 +92,6 @@ export function initFeed() {
         feedContainer.appendChild(card);
     });
 }
-// Прямая бинарная загрузка тяжелых видеороликов в бакет Storage
 function setupUpload() {
     if (!fileInput) return;
     
@@ -110,7 +106,6 @@ function setupUpload() {
             const currentTag = document.querySelector('.profile-tag') ? document.querySelector('.profile-tag').innerText : "@dimka_0770";
             const fileName = `${Date.now()}_${file.name}`;
 
-            // 1. Загружаем файл напрямую в созданный тобой бакет 'videos'
             const { data: storageData, error: storageError } = await window.supabase
                 .storage
                 .from('videos')
@@ -118,7 +113,6 @@ function setupUpload() {
 
             if (storageError) throw storageError;
 
-            // 2. Получаем его вечную публичную HTTP-ссылку
             const { data: urlData } = window.supabase
                 .storage
                 .from('videos')
@@ -126,7 +120,6 @@ function setupUpload() {
 
             const publicUrl = urlData.publicUrl;
 
-            // 3. Создаем запись в таблице базы данных
             const { error: dbError } = await window.supabase
                 .from('videos')
                 .insert([
@@ -143,12 +136,12 @@ function setupUpload() {
 
             if (dbError) throw dbError;
 
-            console.log("Видео успешно загружено и добавлено в базу!");
-            listenToCloudFeed(); // Принудительно обновляем ленту
+            console.log("Видео успешно загружено в облако!");
+            listenToCloudFeed(); 
             
         } catch (error) {
             console.error("Ошибка загрузки:", error.message);
-            alert("Не удалось загрузить видео. Убедись, что бакет 'videos' создан и в его настройках включен тумблер Public!");
+            alert("Ошибка загрузки. Проверь, что в Supabase создан Бакет с именем videos и у него включен тумблер Public!");
         } finally {
             if (btnHome) btnHome.innerHTML = "<span class='nav-icon'>🏠</span><span>Главная</span>";
             if (btnHome) btnHome.click();
@@ -165,7 +158,7 @@ function updateProfileGrid() {
 
     const currentTag = document.querySelector('.profile-tag') ? document.querySelector('.profile-tag').innerText : "@dimka_0770";
     
-    uploadedVideos.forEach((video, index) => {
+    window.uploadedVideos.forEach((video, index) => {
         if (video.author === currentTag) {
             const gridItem = document.createElement('div');
             gridItem.className = 'grid-item';
@@ -188,7 +181,7 @@ function updateProfileGrid() {
             gridItem.addEventListener('click', () => {
                 const btnHome = document.getElementById('btn-home');
                 if (btnHome) btnHome.click();
-                setTimeout(() => playVideoAtIndex(index), 200);
+                setTimeout(() => window.playVideoAtIndex(index), 200);
             });
 
             profileGrid.appendChild(gridItem);
@@ -196,7 +189,7 @@ function updateProfileGrid() {
     });
 }
 
-export function playVideoAtIndex(index) {
+window.playVideoAtIndex = function(index) {
     const cards = document.querySelectorAll("#video-feed .video-card");
     if (cards[index]) {
         cards[index].scrollIntoView({ behavior: "smooth", block: "start" });
@@ -214,7 +207,7 @@ export function playVideoAtIndex(index) {
                 video.play().catch(() => {});
             });
         }
-        activeVideoIndex = index;
+        window.activeVideoIndex = index;
     }
 }
 
@@ -232,7 +225,7 @@ function setupAutoplayObserver() {
                     video.muted = true;
                     video.play().catch(() => {});
                 });
-                activeVideoIndex = index;
+                window.activeVideoIndex = index;
             } else if (video) {
                 video.pause();
                 video.currentTime = 0;

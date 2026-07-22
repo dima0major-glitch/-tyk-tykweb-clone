@@ -9,17 +9,11 @@
 </head>
 <body>
 
-    <!-- Скрытая кнопка выбора файла из галереи Айфона -->
-    <input type="file" id="video-upload-input" accept="video/*">
-
     <!-- ================= ЭКРАН 1: ЛЕНТА ВИДЕО ================= -->
     <div id="screen-feed" class="tiktok-container">
         <div class="video-card">
-            <!-- Контейнер для отслеживания двойного клика -->
             <div class="video-click-area" id="video-area">
                 <video id="main-player" loop playsinline autoplay></video>
-                
-                <!-- Сюда JS будет динамически вставлять сердечки при двойном тапе -->
                 <div class="heart-animation-container" id="heart-box"></div>
             </div>
             
@@ -30,7 +24,6 @@
             </div>
             
             <div class="action-buttons">
-                <!-- ID добавлен для управления из likes.js -->
                 <div class="button-item" id="like-button-right" onclick="toggleLike()">
                     <div class="button-icon">❤️</div>
                     <span class="count" id="like-count">0</span>
@@ -102,9 +95,15 @@
             <span class="nav-icon">🔍</span>
             <span>Интересное</span>
         </div>
+        
+        <!-- Кнопка Плюс (Загрузка) с прозрачным инпутом внутри -->
         <div class="nav-item" id="plus-btn">
-            <div class="nav-create">+</div>
+            <div class="nav-create">
+                +
+                <input type="file" id="video-upload-input" accept="video/*">
+            </div>
         </div>
+        
         <div class="nav-item" onclick="alert('Входящие пусты')">
             <span class="nav-icon">⚡</span>
             <span>Входящие</span>
@@ -115,7 +114,7 @@
         </div>
     </div>
 
-    <!-- ПОДКЛЮЧАЕМ СЦЕНАРИИ (По порядку) -->
+    <!-- ПОДКЛЮЧАЕМ СЦЕНАРИИ -->
     <script src="./app.js"></script>
     <script src="./profile.js"></script>
     <script src="./likes.js"></script>

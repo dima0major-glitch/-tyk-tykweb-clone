@@ -75,15 +75,23 @@
             <button class="edit-btn">Изменить профиль</button>
         </div>
 
+        <!-- Переключатель вкладок внутри профиля -->
         <div class="profile-feed-tabs">
-            <div class="tab-item active">🔒 Видео</div>
-            <div class="tab-item">❤️ Понравилось</div>
+            <div class="tab-item active" id="tab-my-videos">🔒 Видео</div>
+            <div class="tab-item" id="tab-liked-videos">❤️ Понравилось</div>
         </div>
 
-        <!-- Сетка выложенных роликов -->
+        <!-- СЕТКА 1: Твои загруженные ролики -->
         <div class="video-grid" id="profile-grid">
             <div class="grid-item" id="grid-empty-msg" style="grid-column: span 3; background: transparent; font-size: 14px; color: #8a8a8f; text-align: center; padding: 40px 0;">
                 У тебя пока нет видео. Нажми [+] и загрузи первое! 😉
+            </div>
+        </div>
+
+        <!-- СЕТКА 2: Понравившиеся ролики (изначально скрыта) -->
+        <div class="video-grid hidden" id="liked-grid">
+            <div class="grid-item" id="liked-empty-msg" style="grid-column: span 3; background: transparent; font-size: 14px; color: #8a8a8f; text-align: center; padding: 40px 0;">
+                Здесь будут видео, которые ты лайкнул! ❤️
             </div>
         </div>
     </div>
@@ -114,42 +122,25 @@
             </div>
         </div>
     </div>
-    </div>
 
-    <!-- Переключатель вкладок внутри профиля -->
-    <div class="profile-feed-tabs">
-        <div class="tab-item active" id="tab-my-videos">🔒 Видео</div>
-        <div class="tab-item" id="tab-liked-videos">❤️ Понравилось</div>
-    </div>
-
-    <!-- СЕТКА 1: Твои загруженные ролики -->
-    <div class="video-grid" id="profile-grid">
-        <div class="grid-item" id="grid-empty-msg" style="grid-column: span 3; background: transparent; font-size: 14px; color: #8a8a8f; text-align: center; padding: 40px 0;">
-            У тебя пока нет видео. Нажми [+] и загрузи первое! 😉
-        </div>
-    </div>
-
-    <!-- СЕТКА 2: Понравившиеся ролики (изначально скрыта) -->
-    <div class="video-grid hidden" id="liked-grid">
-        <div class="grid-item" id="liked-empty-msg" style="grid-column: span 3; background: transparent; font-size: 14px; color: #8a8a8f; text-align: center; padding: 40px 0;">
-            Здесь будут видео, которые ты лайкнул! ❤️
-        </div>
-    </div>
-
-    <!-- ================= ШТОРКА КОММЕНТАРИЕВ ================= -->
+    <!-- ================= ШТОРКА КОММЕНТАРИЕВ (TIKTOK STYLE) ================= -->
     <div id="comments-sheet" class="comments-overlay hidden">
         <div class="comments-content">
+            <!-- Шапка шторки с кнопкой закрытия -->
             <div class="comments-header">
                 <span>Комментарии (<span id="comments-count-title">0</span>)</span>
                 <button id="btn-comments-close">✕</button>
             </div>
             
+            <!-- Список самих комментариев -->
             <div class="comments-list" id="comments-list-box">
+                <!-- Если комментов нет, покажем заглушку -->
                 <div class="no-comments-msg" id="comments-empty-msg">
                     Будьте первым, кто оставит комментарий! 💬
                 </div>
             </div>
             
+            <!-- Поле ввода внизу шторки -->
             <div class="comments-input-area">
                 <input type="text" id="input-comment-text" placeholder="Добавить комментарий...">
                 <button id="btn-comment-send">▲</button>
@@ -168,6 +159,7 @@
             <span>Интересное</span>
         </div>
         
+        <!-- Кнопка Плюс (Загрузка) с прозрачным инпутом внутри -->
         <div class="nav-item" id="plus-btn">
             <div class="nav-create">
                 +

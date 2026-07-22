@@ -4,54 +4,36 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <title>Tyk Tyk</title>
-    <!-- Подключаем внешний файл со стилями -->
+    <!-- Подключаем стили -->
     <link rel="stylesheet" href="./style.css">
-    <style>
-        /* Небольшое дополнение для скрытого инпута выбора файла */
-        #video-upload-input {
-            display: none;
-        }
-        /* Стиль для подсказки, когда видео еще не загружено */
-        .no-video-msg {
-            position: absolute;
-            top: 50%;
-            left: 50%;
-            transform: translate(-50%, -50%);
-            color: #fff;
-            text-align: center;
-            font-family: sans-serif;
-            font-size: 16px;
-            width: 80%;
-            line-height: 1.5;
-        }
-    </style>
 </head>
 <body>
 
     <!-- Скрытая кнопка выбора файла из галереи Айфона -->
     <input type="file" id="video-upload-input" accept="video/*">
 
-    <!-- Лента вертикальных видео -->
-    <div class="tiktok-container">
-        
-        <!-- ОДИНДИНСТВЕННЫЙ ДИНАМИЧЕСКИЙ РОЛИК -->
+    <!-- ================= ЭКРАН 1: ЛЕНТА ВИДЕО ================= -->
+    <div id="screen-feed" class="tiktok-container">
         <div class="video-card">
-            <!-- Тег видео изначально пустой, ждет твой файл -->
-            <video id="main-player" loop playsinline autoplay></video>
+            <!-- Контейнер для отслеживания двойного клика -->
+            <div class="video-click-area" id="video-area">
+                <video id="main-player" loop playsinline autoplay></video>
+                
+                <!-- Сюда JS будет динамически вставлять сердечки при двойном тапе -->
+                <div class="heart-animation-container" id="heart-box"></div>
+            </div>
             
-            <!-- Подсказка на экране -->
             <div class="no-video-msg" id="upload-hint">
                 <h3>Добро пожаловать в Tyk Tyk! 👋</h3>
                 <br>
-                <p>Экран черный, потому что браузер блокирует чужие ссылки.</p>
-                <br>
-                <p>Пожалуйста, <b>нажми на кнопку [+] внизу</b> и выбери любое видео из галереи своего iPhone!</p>
+                <p>Нажми на кнопку <b>[+]</b> внизу и выбери видео из галереи своего iPhone!</p>
             </div>
             
             <div class="action-buttons">
-                <div class="button-item" onclick="toggleLike(this)">
+                <!-- ID добавлен для управления из likes.js -->
+                <div class="button-item" id="like-button-right" onclick="toggleLike()">
                     <div class="button-icon">❤️</div>
-                    <span class="count">0</span>
+                    <span class="count" id="like-count">0</span>
                 </div>
                 <div class="button-item" onclick="alert('Комментарии в разработке!')">
                     <div class="button-icon">💬</div>
@@ -64,16 +46,55 @@
             </div>
 
             <div class="video-sidebar">
-                <div class="username" id="user-display">@dima0major</div>
-                <div class="description" id="desc-display">Твоё тестовое видео. Работает прямо из памяти телефона! 🚀</div>
+                <div class="username">@dima0major</div>
+                <div class="description">Твой личный Tyk Tyk. Разделено по файлам! 🚀</div>
             </div>
         </div>
-
     </div>
 
-    <!-- Нижнее меню навигации -->
+    <!-- ================= ЭКРАН 2: ПРОФИЛЬ ПОЛЬЗОВАТЕЛЯ ================= -->
+    <div id="screen-profile" class="profile-container hidden">
+        <div class="profile-header">
+            <div class="profile-avatar">😎</div>
+            <div class="profile-username">Dima Major</div>
+            <div class="profile-tag">@dima0major</div>
+            
+            <div class="profile-stats">
+                <div class="stat-item">
+                    <span class="stat-count">142</span>
+                    <span class="stat-label">Подписки</span>
+                </div>
+                <div class="stat-item">
+                    <span class="stat-count">1.2M</span>
+                    <span class="stat-label">Подписчики</span>
+                </div>
+                <div class="stat-item">
+                    <span class="stat-count" id="profile-total-likes">4.8M</span>
+                    <span class="stat-label">Лайки</span>
+                </div>
+            </div>
+
+            <button class="edit-btn" onclick="alert('Редактирование в разработке')">Изменить профиль</button>
+        </div>
+
+        <div class="profile-feed-tabs">
+            <div class="tab-item active">🔒 Видео</div>
+            <div class="tab-item">❤️ Понравилось</div>
+        </div>
+
+        <div class="video-grid">
+            <div class="grid-item">🎬 <span>120K</span></div>
+            <div class="grid-item">🎬 <span>45K</span></div>
+            <div class="grid-item">🎬 <span>312K</span></div>
+            <div class="grid-item">🎬 <span>89K</span></div>
+            <div class="grid-item">🎬 <span>5K</span></div>
+            <div class="grid-item">🎬 <span>67K</span></div>
+        </div>
+    </div>
+
+    <!-- ================= НИЖНЕЕ МЕНЮ НАВИГАЦИИ ================= -->
     <div class="bottom-nav">
-        <div class="nav-item active">
+        <div class="nav-item active" id="btn-home">
             <span class="nav-icon">🏠</span>
             <span>Главная</span>
         </div>
@@ -81,7 +102,6 @@
             <span class="nav-icon">🔍</span>
             <span>Интересное</span>
         </div>
-        <!-- Кнопка ПЛЮС теперь открывает галерею -->
         <div class="nav-item" id="plus-btn">
             <div class="nav-create">+</div>
         </div>
@@ -89,79 +109,15 @@
             <span class="nav-icon">⚡</span>
             <span>Входящие</span>
         </div>
-        <div class="nav-item" onclick="alert('Профиль пользователя')">
+        <div class="nav-item" id="btn-profile">
             <span class="nav-icon">👤</span>
             <span>Профиль</span>
         </div>
     </div>
 
-    <!-- БЛОК СЦЕНАРИЕВ (JavaScript) -->
-    <script>
-        const plusBtn = document.getElementById('plus-btn');
-        const fileInput = document.getElementById('video-upload-input');
-        const videoPlayer = document.getElementById('main-player');
-        const uploadHint = document.getElementById('upload-hint');
-
-        // 1. При клике на [+] симулируем нажатие на выбор файла
-        plusBtn.addEventListener('click', () => {
-            fileInput.click();
-        });
-
-        // 2. Логика подгрузки твоего видео в плеер
-        fileInput.addEventListener('change', function() {
-            const file = this.files[0];
-            if (file) {
-                // Создаем локальную временную ссылку blob на файл из галереи
-                const videoURL = URL.createObjectURL(file);
-                
-                // Передаем её в плеер
-                videoPlayer.src = videoURL;
-                
-                // Прячем текстовую подсказку
-                uploadHint.style.display = 'none';
-                
-                // Запускаем видео со звуком
-                videoPlayer.muted = false;
-                videoPlayer.load();
-                videoPlayer.play().catch(err => {
-                    console.log("iOS заблокировал автоплей, нужен тап:", err);
-                });
-            }
-        });
-
-        // 3. Пауза/Воспроизведение по тапу на экран
-        videoPlayer.addEventListener('click', () => {
-            if (videoPlayer.paused) {
-                videoPlayer.play();
-            } else {
-                videoPlayer.pause();
-            }
-        });
-
-        // 4. Система лайков
-        function toggleLike(element) {
-            element.classList.toggle('liked');
-            const countSpan = element.querySelector('.count');
-            let currentCount = parseInt(countSpan.innerText);
-            
-            if (element.classList.contains('liked')) {
-                countSpan.innerText = currentCount + 1;
-            } else {
-                countSpan.innerText = currentCount - 1;
-            }
-        }
-
-        // 5. Поделиться роликом
-        function shareVideo() {
-            if (navigator.share) {
-                navigator.share({
-                    title: 'Смотри Tyk Tyk!',
-                    url: window.location.href
-                }).catch(() => {});
-            } else {
-                alert('Ссылка скопирована!');
-            }
-        }
-    </script>
+    <!-- ПОДКЛЮЧАЕМ СЦЕНАРИИ (По порядку) -->
+    <script src="./app.js"></script>
+    <script src="./profile.js"></script>
+    <script src="./likes.js"></script>
 </body>
 </html>

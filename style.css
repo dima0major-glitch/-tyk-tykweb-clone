@@ -1,4 +1,3 @@
-/* Сброс настроек браузера */
 * {
     box-sizing: border-box;
     margin: 0;
@@ -12,63 +11,53 @@ body, html {
     height: 100%;
     background-color: #000;
     overflow: hidden;
-    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
 }
 
-/* Главный контейнер ленты с магнитным скроллом */
+.hidden {
+    display: none !important;
+}
+
+/* --- ЛЕНТА ВИДЕО --- */
 .tiktok-container {
     width: 100%;
     height: 100vh;
-    overflow-y: scroll;
-    scroll-snap-type: y mandatory;
-    scrollbar-width: none;
+    overflow: hidden;
 }
 
-.tiktok-container::-webkit-scrollbar {
-    display: none;
-}
-
-/* Карточка каждого видео на весь экран */
 .video-card {
     width: 100%;
     height: 100vh;
-    scroll-snap-align: start;
     position: relative;
     background: #000;
 }
 
-/* Адаптация видео под экран телефона */
+.video-click-area {
+    width: 100%;
+    height: 100%;
+    position: relative;
+}
+
 video {
     width: 100%;
     height: 100%;
     object-fit: cover;
 }
 
-/* Нижнее описание (Автор, хэштеги) */
-.video-sidebar {
+.no-video-msg {
     position: absolute;
-    bottom: 90px;
-    left: 15px;
-    color: white;
-    right: 80px;
-    z-index: 5;
-    text-shadow: 1px 1px 4px rgba(0, 0, 0, 0.7);
-}
-
-.username {
-    font-weight: 700;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    color: #fff;
+    text-align: center;
     font-size: 16px;
-    margin-bottom: 6px;
-    display: flex;
-    align-items: center;
+    width: 80%;
+    line-height: 1.5;
+    pointer-events: none;
 }
 
-.description {
-    font-size: 14px;
-    line-height: 1.3;
-}
-
-/* Боковые кнопки (Лайк, Коммент, Поделиться) */
+/* --- БОКОВЫЕ КНОПКИ --- */
 .action-buttons {
     position: absolute;
     bottom: 120px;
@@ -105,11 +94,8 @@ video {
     transition: transform 0.1s ease;
 }
 
-.button-icon:active {
-    transform: scale(0.85);
-}
+.button-icon:active { transform: scale(0.85); }
 
-/* Состояние когда лайк нажат */
 .liked .button-icon {
     background: #ff0050;
     animation: pop 0.2s ease;
@@ -121,7 +107,76 @@ video {
     100% { transform: scale(1); }
 }
 
-/* Нижняя панель навигации (Меню) */
+.video-sidebar {
+    position: absolute;
+    bottom: 90px;
+    left: 15px;
+    color: white;
+    right: 80px;
+    z-index: 5;
+    text-shadow: 1px 1px 4px rgba(0, 0, 0, 0.7);
+    pointer-events: none;
+}
+
+.username { font-weight: 700; font-size: 16px; margin-bottom: 6px; }
+.description { font-size: 14px; line-height: 1.3; }
+
+/* --- ЭКРАН ПРОФИЛЯ --- */
+.profile-container {
+    width: 100%;
+    height: calc(100vh - 65px);
+    background-color: #000;
+    color: #fff;
+    overflow-y: auto;
+    padding-top: 40px;
+}
+
+.profile-header {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    margin-bottom: 25px;
+}
+
+.profile-avatar {
+    width: 96px;
+    height: 96px;
+    border-radius: 50%;
+    background: linear-gradient(45deg, #ff0050, #00f2fe);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 40px;
+    margin-bottom: 12px;
+    border: 2px solid #fff;
+}
+
+.profile-username { font-size: 18px; font-weight: 700; margin-bottom: 4px; }
+.profile-tag { font-size: 13px; color: #8a8a8f; margin-bottom: 15px; }
+.profile-stats { display: flex; gap: 25px; margin-bottom: 20px; }
+.stat-item { display: flex; flex-direction: column; align-items: center; }
+.stat-count { font-size: 17px; font-weight: 700; }
+.stat-label { font-size: 12px; color: #8a8a8f; margin-top: 2px; }
+
+.edit-btn {
+    background: #262626;
+    color: white;
+    border: none;
+    padding: 8px 30px;
+    font-size: 14px;
+    font-weight: 600;
+    border-radius: 4px;
+}
+
+.profile-feed-tabs { width: 100%; display: flex; border-bottom: 0.5px solid #262626; margin-top: 15px; }
+.tab-item { flex: 1; text-align: center; padding: 12px 0; font-size: 15px; color: #8a8a8f; }
+.tab-item.active { color: #fff; border-bottom: 2px solid #fff; }
+
+.video-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 2px; padding: 2px; }
+.grid-item { aspect-ratio: 3 / 4; background-color: #1c1c1e; display: flex; align-items: center; justify-content: center; font-size: 18px; position: relative; }
+.grid-item span { position: absolute; bottom: 5px; left: 5px; font-size: 11px; font-weight: 600; }
+
+/* --- НИЖНЕЕ МЕНЮ --- */
 .bottom-nav {
     position: fixed;
     bottom: 0;
@@ -137,34 +192,34 @@ video {
     padding-bottom: env(safe-area-inset-bottom);
 }
 
-.nav-item {
-    color: #888;
-    font-size: 10px;
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    gap: 4px;
-    font-weight: 500;
+.nav-item { color: #888; font-size: 10px; display: flex; flex-direction: column; align-items: center; gap: 4px; font-weight: 500; }
+.nav-item.active { color: #fff; }
+.nav-icon { font-size: 20px; }
+.nav-create { background: linear-gradient(90deg, #00f2fe 0%, #4facfe 100%); width: 42px; height: 28px; border-radius: 8px; display: flex; align-items: center; justify-content: center; color: black; font-size: 18px; font-weight: bold; }
+
+/* --- АНИМАЦИЯ СЕРДЕЧКА ПО ЦЕНТРУ --- */
+.heart-animation-container {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    pointer-events: none;
+    z-index: 4;
 }
 
-.nav-item.active {
-    color: #fff;
+.floating-heart {
+    position: absolute;
+    font-size: 80px;
+    color: #ff0050;
+    text-shadow: 0 0 15px rgba(0,0,0,0.6);
+    transform: translate(-50%, -50%) scale(0);
+    animation: heartBlast 0.6s ease-out forwards;
 }
 
-.nav-icon {
-    font-size: 20px;
-}
-
-/* Особая кнопка добавления видео по центру */
-.nav-create {
-    background: linear-gradient(90deg, #00f2fe 0%, #4facfe 100%);
-    width: 42px;
-    height: 28px;
-    border-radius: 8px;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    color: black;
-    font-size: 18px;
-    font-weight: bold;
+@keyframes heartBlast {
+    0% { transform: translate(-50%, -50%) scale(0) rotate(0deg); opacity: 0; }
+    15% { transform: translate(-50%, -50%) scale(1.2) rotate(-15deg); opacity: 0.9; }
+    30% { transform: translate(-50%, -50%) scale(1) rotate(10deg); opacity: 1; }
+    100% { transform: translate(-50%, -70%) scale(0.8) rotate(-10deg); opacity: 0; }
 }

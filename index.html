@@ -5,7 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <title>Tyk Tyk</title>
     <!-- Подключаем внешний файл со стилями -->
-    <link rel="stylesheet" href="style.css">
+    <link rel="stylesheet" href="./style.css">
 </head>
 <body>
 
@@ -14,7 +14,8 @@
         
         <!-- РОЛИК 1 -->
         <div class="video-card">
-            <video src="https://mixkit.co" loop playsinline autoplay muted></video>
+            <!-- Стабильная тестовая ссылка на видео (природа/горы) -->
+            <video src="https://googleapis.com" loop playsinline autoplay muted></video>
             
             <div class="action-buttons">
                 <div class="button-item" onclick="toggleLike(this)">
@@ -33,13 +34,14 @@
 
             <div class="video-sidebar">
                 <div class="username">@dima0major</div>
-                <div class="description">Мой первый ролик в Tyk Tyk! Нажми на экран, чтобы включить звук 🔊 #coding #pwa #tiktok</div>
+                <div class="description">Тестируем новые ссылки! Нажми на экран, чтобы пошло видео со звуком 🔊 #coding #tyktyk</div>
             </div>
         </div>
 
         <!-- РОЛИК 2 -->
         <div class="video-card">
-            <video src="https://mixkit.co" loop playsinline></video>
+            <!-- Вторая стабильная ссылка (анимация с кроликом) -->
+            <video src="https://googleapis.com" loop playsinline muted></video>
             
             <div class="action-buttons">
                 <div class="button-item" onclick="toggleLike(this)">
@@ -58,7 +60,7 @@
 
             <div class="video-sidebar">
                 <div class="username">@it_developer</div>
-                <div class="description">Это создано полностью через браузер телефона. Магнитный свайп работает идеально! 🔥</div>
+                <div class="description">Свайпни вверх или вниз, чтобы переключить ролик! 🔥</div>
             </div>
         </div>
 
@@ -108,7 +110,7 @@
         videos.forEach(video => {
             video.addEventListener('click', () => {
                 if (video.muted) {
-                    video.muted = false;
+                    video.muted = false; // Отключаем беззвучный режим на iOS при первом тапе
                 }
                 if (video.paused) {
                     video.play();

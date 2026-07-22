@@ -1,4 +1,4 @@
-// Стабильная логика бесконечной ленты с автоплеем для iOS
+// Стабильная логика бесконечной ленты с автоплеем и контролем звука для iOS
 const fileInput = document.getElementById('video-upload-input');
 const profileGrid = document.getElementById('profile-grid');
 const feedContainer = document.getElementById('video-feed');
@@ -6,11 +6,14 @@ const feedContainer = document.getElementById('video-feed');
 // Загружаем сохраненное состояние, если оно есть, иначе пустой массив
 export let uploadedVideos = JSON.parse(localStorage.getItem('tyk_tyk_videos_state')) || [];
 export let activeVideoIndex = 0;
+// Глобальный флаг: включил ли пользователь звук вообще в этой сессии
+let isSoundGloballyEnabled = false;
 
 document.addEventListener("DOMContentLoaded", () => {
     initFeed();
     setupUpload();
     setupAutoplayObserver();
+    setupVideoTaps(); // Подключаем обработку тапов по экрану (звук / пауза)
     
     // Если в памяти уже были видео, перерисуем и сетку профиля
     if (uploadedVideos.length > 0 && profileGrid) {
@@ -48,7 +51,6 @@ export function initFeed() {
         card.style.scrollSnapAlign = "start";
         card.style.position = "relative";
 
-        // Добавлено: muted, playsinline, webkit-playsinline — жесткое требование Apple для автоплея
         card.innerHTML = `
             <div class="video-click-area" data-index="${index}" style="width:100%; height:100%; position:absolute; top:0; left:0; z-index:1;">
                 <video src="${video.url}" loop muted playsinline webkit-playsinline style="width:100%; height:100%; object-fit:cover;"></video>
@@ -78,7 +80,6 @@ export function initFeed() {
         feedContainer.appendChild(card);
     });
 }
-
 function setupUpload() {
     if (!fileInput) return;
     
@@ -153,7 +154,6 @@ export function playVideoAtIndex(index) {
     if (cards[index]) {
         cards[index].scrollIntoView({ behavior: "smooth", block: "start" });
         
-        // Гарантируем остановку остальных видео
         document.querySelectorAll("#video-feed video").forEach(v => {
             v.pause();
             v.muted = true;
@@ -161,15 +161,11 @@ export function playVideoAtIndex(index) {
 
         const video = cards[index].querySelector("video");
         if (video) {
-            video.muted = false; // Звук включится, так как это действие по клику
-            const playPromise = video.play();
-            if (playPromise !== undefined) {
-                playPromise.catch(error => {
-                    console.log("iOS требует тапа для звука, включаем без звука:", error);
-                    video.muted = true;
-                    video.play().catch(() => {});
-                });
-            }
+            video.muted = !isSoundGloballyEnabled; 
+            video.play().catch(() => {
+                video.muted = true;
+                video.play().catch(() => {});
+            });
         }
         activeVideoIndex = index;
     }
@@ -184,24 +180,62 @@ function setupAutoplayObserver() {
             const index = parseInt(entry.target.getAttribute("data-index"));
 
             if (entry.isIntersecting && video) {
-                // При автоскролле запускаем БЕЗ звука, чтобы iOS не блокировал плеер
-                video.muted = true; 
-                video.play().catch(() => {});
+                video.muted = !isSoundGloballyEnabled; 
+                video.play().catch(() => {
+                    video.muted = true;
+                    video.play().catch(() => {});
+                });
                 activeVideoIndex = index;
             } else if (video) {
                 video.pause();
                 video.currentTime = 0;
             }
         });
-    }, { threshold: 0.6 }); // Снизили порог до 60% для более четкого срабатывания на малых экранах
+    }, { threshold: 0.6 });
 
     const mutationObserver = new MutationObserver(() => {
         document.querySelectorAll("#video-feed .video-card").forEach(card => observer.observe(card));
     });
     mutationObserver.observe(feedContainer, { childList: true });
     
-    // Сразу вешаем на существующие
     document.querySelectorAll("#video-feed .video-card").forEach(card => observer.observe(card));
+}
+
+let lastTapTime = 0;
+function setupVideoTaps() {
+    if (!feedContainer) return;
+
+    feedContainer.addEventListener('click', (e) => {
+        const clickArea = e.target.closest('.video-click-area');
+        if (!clickArea) return;
+
+        const card = clickArea.closest('.video-card');
+        const video = card.querySelector('video');
+        if (!video) return;
+
+        const currentTime = new Date().getTime();
+        const tapLength = currentTime - lastTapTime;
+
+        if (tapLength > 300 || tapLength === 0) {
+            setTimeout(() => {
+                const innerCurrentTime = new Date().getTime();
+                if (innerCurrentTime - lastTapTime >= 300) {
+                    if (video.muted) {
+                        video.muted = false;
+                        isSoundGloballyEnabled = true;
+                        console.log("Звук включен пользователем");
+                    } else {
+                        if (video.paused) {
+                            video.play().catch(() => {});
+                        } else {
+                            video.pause();
+                        }
+                    }
+                }
+            }, 300);
+        }
+        lastTapTime = currentTime;
+    });
 }
 
 if (feedContainer) {

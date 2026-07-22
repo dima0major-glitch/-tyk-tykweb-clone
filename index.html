@@ -12,8 +12,11 @@
     <!-- ================= ЭКРАН 1: ЛЕНТА ВИДЕО ================= -->
     <div id="screen-feed" class="tiktok-container">
         <div class="video-card">
+            <!-- Контейнер для отслеживания двойного клика -->
             <div class="video-click-area" id="video-area">
                 <video id="main-player" loop playsinline autoplay></video>
+                
+                <!-- Сюда JS будет динамически вставлять сердечки при двойном тапе -->
                 <div class="heart-animation-container" id="heart-box"></div>
             </div>
             
@@ -67,7 +70,8 @@
                 </div>
             </div>
 
-            <button class="edit-btn" onclick="alert('Редактирование в разработке')">Изменить профиль</button>
+            <!-- Чистая кнопка без старого onclick -->
+            <button class="edit-btn">Изменить профиль</button>
         </div>
 
         <div class="profile-feed-tabs">
@@ -82,6 +86,33 @@
             <div class="grid-item">🎬 <span>89K</span></div>
             <div class="grid-item">🎬 <span>5K</span></div>
             <div class="grid-item">🎬 <span>67K</span></div>
+        </div>
+    </div>
+
+    <!-- ================= ВСПЛЫВАЮЩЕЕ ОКНО РЕДАКТИРОВАНИЯ ================= -->
+    <div id="edit-profile-modal" class="modal-overlay hidden">
+        <div class="modal-content">
+            <h3 class="modal-title">Редактировать профиль</h3>
+            
+            <div class="input-group">
+                <label>Имя</label>
+                <input type="text" id="input-name" placeholder="Введите имя">
+            </div>
+            
+            <div class="input-group">
+                <label>Имя пользователя (тег)</label>
+                <input type="text" id="input-tag" placeholder="Введите тег">
+            </div>
+            
+            <div class="input-group">
+                <label>Эмодзи аватарки</label>
+                <input type="text" id="input-avatar" placeholder="Например: 🔥 или 👑" maxlength="2">
+            </div>
+            
+            <div class="modal-buttons">
+                <button class="modal-btn cancel" id="btn-modal-cancel">Отмена</button>
+                <button class="modal-btn save" id="btn-modal-save">Сохранить</button>
+            </div>
         </div>
     </div>
 
@@ -114,38 +145,10 @@
         </div>
     </div>
 
-    <!-- ПОДКЛЮЧАЕМ СЦЕНАРИИ -->
- 
-       <!-- ================= ВСПЛЫВАЮЩЕЕ ОКНО РЕДАКТИРОВАНИЯ ================= -->
-    <div id="edit-profile-modal" class="modal-overlay hidden">
-        <div class="modal-content">
-            <h3 class="modal-title">Редактировать профиль</h3>
-            
-            <div class="input-group">
-                <label>Имя</label>
-                <input type="text" id="input-name" placeholder="Введите имя">
-            </div>
-            
-            <div class="input-group">
-                <label>Имя пользователя (тег)</label>
-                <input type="text" id="input-tag" placeholder="Введите тег">
-            </div>
-            
-            <div class="input-group">
-                <label>Эмодзи аватарки</label>
-                <input type="text" id="input-avatar" placeholder="Например: 🔥 или 👑" maxlength="2">
-            </div>
-            
-            <div class="modal-buttons">
-                <button class="modal-btn cancel" id="btn-modal-cancel">Отмена</button>
-                <button class="modal-btn save" id="btn-modal-save">Сохранить</button>
-            </div>
-        </div>
-    </div>
- <script src="./app.js"></script>
+    <!-- ПОДКЛЮЧАЕМ СЦЕНАРИИ (По порядку) -->
+    <script src="./app.js"></script>
     <script src="./profile.js"></script>
     <script src="./likes.js"></script>
     <script src="./edit-profile.js"></script>
-
 </body>
 </html>

@@ -10,7 +10,7 @@
 <body>
 
     <!-- ================= ЭКРАН 1: ЛЕНТА ВИДЕО ================= -->
-    <!-- Изменено: теперь внутри находится только чистый контейнер для бесконечного скролла -->
+    <!-- Внутри находится чистый контейнер для бесконечного облачного скролла Supabase -->
     <div id="screen-feed" class="tiktok-container">
         <div id="video-feed" style="width: 100%; height: 100%; overflow-y: scroll; scroll-snap-type: y mandatory; -webkit-overflow-scrolling: touch;"></div>
     </div>
@@ -50,7 +50,7 @@
         <!-- СЕТКА 1: Твои загруженные ролики -->
         <div class="video-grid" id="profile-grid">
             <div class="grid-item" id="grid-empty-msg" style="grid-column: span 3; background: transparent; font-size: 14px; color: #8a8a8f; text-align: center; padding: 40px 0;">
-                У тебя пока нет видео. Нажми [+] и загрузи первое! 😉
+                У тебя пока нет video. Нажми [+] и загрузи первое! 😉
             </div>
         </div>
 
@@ -61,7 +61,6 @@
             </div>
         </div>
     </div>
-
     <!-- ================= ВСПЛЫВАЮЩЕЕ ОКНО РЕДАКТИРОВАНИЯ ================= -->
     <div id="edit-profile-modal" class="modal-overlay hidden">
         <div class="modal-content">
@@ -143,8 +142,8 @@
         </div>
     </div>
 
-    <!-- ПОДКЛЮЧАЕМ Firebase Конфигурацию как Модуль -->
-    <script type="module" src="./firebase-config.js"></script>
+    <!-- ПОДКЛЮЧАЕМ Облачную Конфигурацию Supabase как Модуль вместо Firebase -->
+    <script type="module" src="./supabase-config.js"></script>
     
     <!-- ПОДКЛЮЧАЕМ ОСТАЛЬНЫЕ СЦЕНАРИИ КАК МОДУЛИ -->
     <script type="module" src="./app.js"></script>

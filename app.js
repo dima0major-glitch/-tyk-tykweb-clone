@@ -1,4 +1,4 @@
-// Модуль бесконечной ленты Tyk Tyk на базе Firebase Cloud
+// Логика бесконечной свайп-ленты на базе облачного хранилища Supabase
 const fileInput = document.getElementById('video-upload-input');
 const profileGrid = document.getElementById('profile-grid');
 const feedContainer = document.getElementById('video-feed');
@@ -8,35 +8,40 @@ export let activeVideoIndex = 0;
 let isSoundGloballyEnabled = false;
 
 document.addEventListener("DOMContentLoaded", () => {
-    // Подключаем слушатель облачной базы данных
-    listenToCloudFeed();
+    // Каждую секунду проверяем, загрузился ли конфиг Supabase
+    const checkSupabase = setInterval(() => {
+        if (window.supabase) {
+            clearInterval(checkSupabase);
+            listenToCloudFeed(); // Запускаем стриминг ленты из облака
+        }
+    }, 100);
+
     setupUpload();
     setupAutoplayObserver();
     setupVideoTaps();
 });
 
-// Слушаем изменения в коллекции видео на сервере Firebase Firestore
-function listenToCloudFeed() {
-    if (!window.db) {
-        console.error("Firebase еще не инициализирован");
+// Стриминг видеороликов из базы данных Supabase в реальном времени
+async function listenToCloudFeed() {
+    if (!window.supabase) return;
+
+    // Запрашиваем список всех видео, сортируя по дате добавления (новые сверху)
+    const { data, error } = await window.supabase
+        .from('videos')
+        .select('*')
+        .order('createdAt', { ascending: false });
+
+    if (error) {
+        console.error("Ошибка загрузки ленты:", error.message);
         return;
     }
 
-    const q = window.fbQuery(window.fbCollection(window.db, "videos"), window.fbOrderBy("createdAt", "desc"));
-    
-    window.fbOnSnapshot(q, (snapshot) => {
-        uploadedVideos = [];
-        snapshot.forEach((doc) => {
-            uploadedVideos.push({ id: doc.id, ...doc.data() });
-        });
-
-        // Перерисовываем ленту и профиль из облака
-        initFeed();
-        updateProfileGrid();
-    });
+    uploadedVideos = data || [];
+    initFeed();
+    updateProfileGrid();
 }
 
-// Отрисовка карточек из облачных ссылок
+// Отрисовка карточек ленты из прямых веб-ссылок Supabase
 export function initFeed() {
     if (!feedContainer) return;
     feedContainer.innerHTML = "";
@@ -46,7 +51,7 @@ export function initFeed() {
             <div class="no-video-msg" id="upload-hint" style="display: flex; flex-direction: column; align-items: center; justify-content: center; height: 100%; text-align: center; padding: 20px; color: #fff;">
                 <h3>Лента пуста ☁️</h3>
                 <br>
-                <p>Нажми на кнопку <b>[+]</b> внизу и загрузи первое видео в облако Firebase!</p>
+                <p>Нажми на кнопку <b>[+]</b> внизу и загрузи первое полноценное видео в облако Supabase!</p>
             </div>
         `;
         return;
@@ -84,48 +89,66 @@ export function initFeed() {
 
             <div class="video-sidebar" style="z-index:2; position:absolute;">
                 <div class="username">${video.author || '@dimka_0770'}</div>
-                <div class="description">${video.description || 'Загружено в облако!'}</div>
+                <div class="description">${video.description || 'Стриминг из Supabase Storage! 🎬'}</div>
             </div>
         `;
         feedContainer.appendChild(card);
     });
 }
-// Логика загрузки файла в Firebase Storage
+// Прямая бинарная загрузка тяжелых видеороликов в бакет Storage
 function setupUpload() {
     if (!fileInput) return;
     
     fileInput.addEventListener('change', async function() {
         const file = this.files[0];
-        if (!file) return;
+        if (!file || !window.supabase) return;
 
-        // Показываем индикатор загрузки, чтобы юзер видел прогресс
         const btnHome = document.getElementById('btn-home');
-        if (btnHome) btnHome.innerText = "⏳...";
+        if (btnHome) btnHome.innerText = "⏳ Загрузка...";
 
         try {
             const currentTag = document.querySelector('.profile-tag') ? document.querySelector('.profile-tag').innerText : "@dimka_0770";
-            const fileRef = window.fbRef(window.storage, `videos/${Date.now()}_${file.name}`);
-            
-            // 1. Грузим физический файл в Storage
-            const uploadResult = await window.fbUploadBytes(fileRef, file);
-            // 2. Получаем вечную прямую HTTP-ссылку от Google
-            const downloadUrl = await window.fbGetDownloadURL(uploadResult.ref);
-            
-            // 3. Пишем метаданные в базу Firestore
-            await window.fbAddDoc(window.fbCollection(window.db, "videos"), {
-                url: downloadUrl,
-                author: currentTag,
-                description: `Ролик в облаке Tyk Tyk! 🚀`,
-                likes: 0,
-                isLiked: false,
-                comments: [],
-                createdAt: Date.now()
-            });
+            const fileName = `${Date.now()}_${file.name}`;
 
-            console.log("Видео успешно обработано и сохранено на сервере!");
+            // 1. Загружаем файл напрямую в созданный тобой бакет 'videos'
+            const { data: storageData, error: storageError } = await window.supabase
+                .storage
+                .from('videos')
+                .upload(fileName, file);
+
+            if (storageError) throw storageError;
+
+            // 2. Получаем его вечную публичную HTTP-ссылку
+            const { data: urlData } = window.supabase
+                .storage
+                .from('videos')
+                .getPublicUrl(fileName);
+
+            const publicUrl = urlData.publicUrl;
+
+            // 3. Создаем запись в таблице базы данных
+            const { error: dbError } = await window.supabase
+                .from('videos')
+                .insert([
+                    {
+                        url: publicUrl,
+                        author: currentTag,
+                        description: `Новый хит в облачной ленте Supabase! 🔥`,
+                        likes: 0,
+                        isLiked: false,
+                        comments: [],
+                        createdAt: new Date().toISOString()
+                    }
+                ]);
+
+            if (dbError) throw dbError;
+
+            console.log("Видео успешно загружено и добавлено в базу!");
+            listenToCloudFeed(); // Принудительно обновляем ленту
+            
         } catch (error) {
-            console.error("Критическая ошибка загрузки в облако:", error);
-            alert("Не удалось загрузить. Убедись, что в Firebase Console включены Storage и Firestore без авторизации.");
+            console.error("Ошибка загрузки:", error.message);
+            alert("Не удалось загрузить видео. Убедись, что бакет 'videos' создан и в его настройках включен тумблер Public!");
         } finally {
             if (btnHome) btnHome.innerHTML = "<span class='nav-icon'>🏠</span><span>Главная</span>";
             if (btnHome) btnHome.click();

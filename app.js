@@ -1,31 +1,42 @@
-// Стабильная лента с автоплеем, контролем звука и сохранением видео в Base64 для iPhone
+// Модуль бесконечной ленты Tyk Tyk на базе Firebase Cloud
 const fileInput = document.getElementById('video-upload-input');
 const profileGrid = document.getElementById('profile-grid');
 const feedContainer = document.getElementById('video-feed');
 
-// Загружаем сохраненную ленту из LocalStorage
-export let uploadedVideos = JSON.parse(localStorage.getItem('tyk_tyk_videos_state')) || [];
+export let uploadedVideos = [];
 export let activeVideoIndex = 0;
 let isSoundGloballyEnabled = false;
 
 document.addEventListener("DOMContentLoaded", () => {
-    initFeed();
+    // Подключаем слушатель облачной базы данных
+    listenToCloudFeed();
     setupUpload();
     setupAutoplayObserver();
     setupVideoTaps();
-    
-    // Восстанавливаем сетку профиля из сохраненных Base64 данных
-    if (uploadedVideos.length > 0 && profileGrid) {
-        const emptyMsg = document.getElementById('grid-empty-msg');
-        if (emptyMsg) emptyMsg.remove();
-        profileGrid.innerHTML = "";
-        uploadedVideos.forEach((video, index) => {
-            createProfileGridItem(video.url, index);
-        });
-    }
 });
 
-// Отрисовка карточек ленты
+// Слушаем изменения в коллекции видео на сервере Firebase Firestore
+function listenToCloudFeed() {
+    if (!window.db) {
+        console.error("Firebase еще не инициализирован");
+        return;
+    }
+
+    const q = window.fbQuery(window.fbCollection(window.db, "videos"), window.fbOrderBy("createdAt", "desc"));
+    
+    window.fbOnSnapshot(q, (snapshot) => {
+        uploadedVideos = [];
+        snapshot.forEach((doc) => {
+            uploadedVideos.push({ id: doc.id, ...doc.data() });
+        });
+
+        // Перерисовываем ленту и профиль из облака
+        initFeed();
+        updateProfileGrid();
+    });
+}
+
+// Отрисовка карточек из облачных ссылок
 export function initFeed() {
     if (!feedContainer) return;
     feedContainer.innerHTML = "";
@@ -33,9 +44,9 @@ export function initFeed() {
     if (uploadedVideos.length === 0) {
         feedContainer.innerHTML = `
             <div class="no-video-msg" id="upload-hint" style="display: flex; flex-direction: column; align-items: center; justify-content: center; height: 100%; text-align: center; padding: 20px; color: #fff;">
-                <h3>Добро пожаловать в Tyk Tyk! 👋</h3>
+                <h3>Лента пуста ☁️</h3>
                 <br>
-                <p>Нажми на кнопку <b>[+]</b> внизу и выбери видео из галереи своего iPhone!</p>
+                <p>Нажми на кнопку <b>[+]</b> внизу и загрузи первое видео в облако Firebase!</p>
             </div>
         `;
         return;
@@ -59,7 +70,7 @@ export function initFeed() {
             <div class="action-buttons" style="z-index:2; position:absolute;">
                 <div class="button-item like-btn ${video.isLiked ? 'liked' : ''}" data-index="${index}">
                     <div class="button-icon">${video.isLiked ? '❤️' : '🤍'}</div>
-                    <span class="count like-count">${video.likes}</span>
+                    <span class="count like-count">${video.likes || 0}</span>
                 </div>
                 <div class="button-item comment-btn" data-index="${index}">
                     <div class="button-icon">💬</div>
@@ -73,86 +84,93 @@ export function initFeed() {
 
             <div class="video-sidebar" style="z-index:2; position:absolute;">
                 <div class="username">${video.author || '@dimka_0770'}</div>
-                <div class="description">${video.description}</div>
+                <div class="description">${video.description || 'Загружено в облако!'}</div>
             </div>
         `;
         feedContainer.appendChild(card);
     });
 }
-// Изменено: Используем FileReader для перевода видео в вечную Base64 строку
+// Логика загрузки файла в Firebase Storage
 function setupUpload() {
     if (!fileInput) return;
     
-    fileInput.addEventListener('change', function() {
+    fileInput.addEventListener('change', async function() {
         const file = this.files[0];
-        if (file) {
-            const reader = new FileReader();
+        if (!file) return;
+
+        // Показываем индикатор загрузки, чтобы юзер видел прогресс
+        const btnHome = document.getElementById('btn-home');
+        if (btnHome) btnHome.innerText = "⏳...";
+
+        try {
+            const currentTag = document.querySelector('.profile-tag') ? document.querySelector('.profile-tag').innerText : "@dimka_0770";
+            const fileRef = window.fbRef(window.storage, `videos/${Date.now()}_${file.name}`);
             
-            reader.onload = function(event) {
-                const base64Video = event.target.result;
-                const currentTag = document.querySelector('.profile-tag') ? document.querySelector('.profile-tag').innerText : "@dimka_0770";
-                
-                const newVideo = {
-                    id: Date.now().toString(),
-                    url: base64Video, // Теперь тут хранится вечный код видео
-                    author: currentTag,
-                    description: `Ролик #${uploadedVideos.length + 1} в ленте! 🔥`,
-                    likes: 0,
-                    isLiked: false,
-                    comments: []
-                };
-                
-                uploadedVideos.push(newVideo);
-                localStorage.setItem('tyk_tyk_videos_state', JSON.stringify(uploadedVideos));
-                
-                initFeed();
-
-                const emptyMsg = document.getElementById('grid-empty-msg');
-                if (emptyMsg) emptyMsg.remove();
-
-                createProfileGridItem(base64Video, uploadedVideos.length - 1);
-
-                const newIndex = uploadedVideos.length - 1;
-                setTimeout(() => playVideoAtIndex(newIndex), 300);
-
-                const btnHome = document.getElementById('btn-home');
-                if (btnHome) btnHome.click();
-            };
+            // 1. Грузим физический файл в Storage
+            const uploadResult = await window.fbUploadBytes(fileRef, file);
+            // 2. Получаем вечную прямую HTTP-ссылку от Google
+            const downloadUrl = await window.fbGetDownloadURL(uploadResult.ref);
             
-            reader.readAsDataURL(file); // Запуск конвертации видео файла
+            // 3. Пишем метаданные в базу Firestore
+            await window.fbAddDoc(window.fbCollection(window.db, "videos"), {
+                url: downloadUrl,
+                author: currentTag,
+                description: `Ролик в облаке Tyk Tyk! 🚀`,
+                likes: 0,
+                isLiked: false,
+                comments: [],
+                createdAt: Date.now()
+            });
+
+            console.log("Видео успешно обработано и сохранено на сервере!");
+        } catch (error) {
+            console.error("Критическая ошибка загрузки в облако:", error);
+            alert("Не удалось загрузить. Убедись, что в Firebase Console включены Storage и Firestore без авторизации.");
+        } finally {
+            if (btnHome) btnHome.innerHTML = "<span class='nav-icon'>🏠</span><span>Главная</span>";
+            if (btnHome) btnHome.click();
         }
     });
 }
 
-function createProfileGridItem(url, index) {
+function updateProfileGrid() {
     if (!profileGrid) return;
+    profileGrid.innerHTML = "";
+    
+    const emptyMsg = document.getElementById('grid-empty-msg');
+    if (emptyMsg) emptyMsg.remove();
 
-    const gridItem = document.createElement('div');
-    gridItem.className = 'grid-item';
-    gridItem.setAttribute('data-index', index);
+    const currentTag = document.querySelector('.profile-tag') ? document.querySelector('.profile-tag').innerText : "@dimka_0770";
     
-    const previewVideo = document.createElement('video');
-    previewVideo.src = url;
-    previewVideo.muted = true;
-    previewVideo.playsInline = true;
-    previewVideo.webkitPlaysInline = true;
-    previewVideo.style.width = '100%';
-    previewVideo.style.height = '100%';
-    previewVideo.style.objectFit = 'cover';
-    
-    const viewsLabel = document.createElement('span');
-    viewsLabel.innerHTML = '🎬 新'; 
-    
-    gridItem.appendChild(previewVideo);
-    gridItem.appendChild(viewsLabel);
-    
-    gridItem.addEventListener('click', () => {
-        const btnHome = document.getElementById('btn-home');
-        if (btnHome) btnHome.click();
-        setTimeout(() => playVideoAtIndex(index), 200);
+    uploadedVideos.forEach((video, index) => {
+        if (video.author === currentTag) {
+            const gridItem = document.createElement('div');
+            gridItem.className = 'grid-item';
+            
+            const previewVideo = document.createElement('video');
+            previewVideo.src = video.url;
+            previewVideo.muted = true;
+            previewVideo.playsInline = true;
+            previewVideo.webkitPlaysInline = true;
+            previewVideo.style.width = '100%';
+            previewVideo.style.height = '100%';
+            previewVideo.style.objectFit = 'cover';
+            
+            const viewsLabel = document.createElement('span');
+            viewsLabel.innerHTML = '🎬 云'; 
+            
+            gridItem.appendChild(previewVideo);
+            gridItem.appendChild(viewsLabel);
+            
+            gridItem.addEventListener('click', () => {
+                const btnHome = document.getElementById('btn-home');
+                if (btnHome) btnHome.click();
+                setTimeout(() => playVideoAtIndex(index), 200);
+            });
+
+            profileGrid.appendChild(gridItem);
+        }
     });
-
-    profileGrid.insertBefore(gridItem, profileGrid.firstChild);
 }
 
 export function playVideoAtIndex(index) {
@@ -203,8 +221,6 @@ function setupAutoplayObserver() {
         document.querySelectorAll("#video-feed .video-card").forEach(card => observer.observe(card));
     });
     mutationObserver.observe(feedContainer, { childList: true });
-    
-    document.querySelectorAll("#video-feed .video-card").forEach(card => observer.observe(card));
 }
 
 let lastTapTime = 0;
@@ -241,23 +257,4 @@ function setupVideoTaps() {
         }
         lastTapTime = currentTime;
     });
-}
-
-if (feedContainer) {
-    feedContainer.addEventListener('click', (e) => {
-        if (e.target.closest('.share-btn')) {
-            shareVideo();
-        }
-    });
-}
-
-function shareVideo() {
-    if (navigator.share) {
-        navigator.share({
-            title: 'Смотри Tyk Tyk!',
-            url: window.location.href
-        }).catch(() => {});
-    } else {
-        alert('Ссылка скопирована!');
-    }
 }

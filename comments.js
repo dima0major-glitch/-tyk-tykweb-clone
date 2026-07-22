@@ -1,26 +1,58 @@
-// Стабильная логика комментариев через LocalStorage (память iPhone)
+// Стабильная логика комментариев через LocalStorage (память iPhone) с привязкой к бесконечной ленте
+import { uploadedVideos, activeVideoIndex } from './app.js';
 
-const btnCommentsOpen = document.getElementById('btn-comments-open');
 const btnCommentsClose = document.getElementById('btn-comments-close');
 const commentsSheet = document.getElementById('comments-sheet');
 const btnCommentSend = document.getElementById('btn-comment-send');
 const inputCommentText = document.getElementById('input-comment-text');
 const commentsListBox = document.getElementById('comments-list-box');
-
-const rightBarCommentCount = document.getElementById('right-bar-comment-count');
 const titleCommentCount = document.getElementById('comments-count-title');
 
-// 1. Открытие и закрытие шторки
-if (btnCommentsOpen) {
-    btnCommentsOpen.addEventListener('click', () => commentsSheet.classList.remove('hidden'));
+let currentCommentVideoIndex = null;
+
+document.addEventListener('DOMContentLoaded', () => {
+    const feedContainer = document.getElementById('video-feed');
+    
+    if (feedContainer) {
+        // Делегируем клик открытия комментов для динамических карточек на ленте
+        feedContainer.addEventListener('click', (e) => {
+            const commentBtn = e.target.closest('.comment-btn');
+            if (commentBtn) {
+                currentCommentVideoIndex = parseInt(commentBtn.getAttribute('data-index'));
+                openComments();
+            }
+        });
+    }
+
+    if (btnCommentsClose) {
+        btnCommentsClose.addEventListener('click', closeComments);
+    }
+
+    if (commentsSheet) {
+        commentsSheet.addEventListener('click', (e) => {
+            if (e.target === commentsSheet) closeComments();
+        });
+    }
+
+    if (btnCommentSend) {
+        btnCommentSend.addEventListener('click', sendNewComment);
+    }
+
+    if (inputCommentText) {
+        inputCommentText.addEventListener('keydown', (e) => {
+            if (e.key === 'Enter') sendNewComment();
+        });
+    }
+});
+
+function openComments() {
+    if (commentsSheet) commentsSheet.classList.remove('hidden');
+    renderComments();
 }
-if (btnCommentsClose) {
-    btnCommentsClose.addEventListener('click', () => commentsSheet.classList.add('hidden'));
-}
-if (commentsSheet) {
-    commentsSheet.addEventListener('click', (e) => {
-        if (e.target === commentsSheet) commentsSheet.classList.add('hidden');
-    });
+
+function closeComments() {
+    if (commentsSheet) commentsSheet.classList.add('hidden');
+    currentCommentVideoIndex = null;
 }
 
 // Вспомогательная функция для красивого вывода времени
@@ -37,10 +69,12 @@ function formatCommentTime(timestamp) {
     return new Date(timestamp).toLocaleDateString();
 }
 
-// 2. ОТПРАВКА И СОХРАНЕНИЕ КОММЕНТАРИЯ
+// 2. ОТПРАВКА И СОХРАНЕНИЕ КОММЕНТАРИЯ К КОНКРЕТНОМУ РОЛИКУ
 function sendNewComment() {
     const text = inputCommentText.value.trim();
-    if (text === "") return;
+    // Проверяем, есть ли текст и выбрано ли активное видео
+    const targetIndex = currentCommentVideoIndex !== null ? currentCommentVideoIndex : activeVideoIndex;
+    if (text === "" || !uploadedVideos[targetIndex]) return;
 
     // Достаем ник и аватарку прямо с экрана
     const currentUsername = document.querySelector('.profile-tag') ? document.querySelector('.profile-tag').innerText : "@dima0major";
@@ -53,38 +87,49 @@ function sendNewComment() {
         createdAt: new Date().getTime()
     };
 
-    // Читаем старые комменты из памяти телефона
-    let savedComments = JSON.parse(localStorage.getItem('tyk_tyk_comments')) || [];
+    const videoData = uploadedVideos[targetIndex];
+    if (!videoData.comments) videoData.comments = [];
     
-    // Добавляем новый в начало массива
-    savedComments.unshift(newComment);
+    // Добавляем новый коммент в начало массива этого видео
+    videoData.comments.unshift(newComment);
 
-    // Перезаписываем память iPhone
-    localStorage.setItem('tyk_tyk_comments', JSON.stringify(savedComments));
+    // Сохраняем обновленный массив всей ленты видео в память iPhone
+    localStorage.setItem('tyk_tyk_videos_state', JSON.stringify(uploadedVideos));
 
     inputCommentText.value = ""; // Очищаем поле ввода
 
-    // Обновляем список на экране
+    // Обновляем счетчик на кнопке внутри самой карточки видео на ленте
+    const currentCard = document.querySelector(`#video-feed .video-card[data-index="${targetIndex}"]`);
+    if (currentCard) {
+        const counter = currentCard.querySelector('.comment-count');
+        if (counter) counter.innerText = videoData.comments.length;
+    }
+
+    // Обновляем список на экране шторки
     renderComments();
 }
 
-if (btnCommentSend) {
-    btnCommentSend.addEventListener('click', sendNewComment);
-}
-if (inputCommentText) {
-    inputCommentText.addEventListener('keydown', (e) => {
-        if (e.key === 'Enter') sendNewComment();
-    });
-}
-
-// 3. ОТРИСОВКА ИЗ ПАМЯТИ
+// 3. ОТРИСОВКА ИЗ ОБЪЕКТА АКТИВНОГО ВИДЕО
 function renderComments() {
     if (!commentsListBox) return;
 
-    const savedComments = JSON.parse(localStorage.getItem('tyk_tyk_comments')) || [];
+    const targetIndex = currentCommentVideoIndex !== null ? currentCommentVideoIndex : activeVideoIndex;
+    const videoData = uploadedVideos[targetIndex];
+
+    if (!videoData) {
+        commentsListBox.innerHTML = `
+            <div class="no-comments-msg" id="comments-empty-msg">
+                Будьте первым, кто оставит комментарий! 💬
+            </div>
+        `;
+        if (titleCommentCount) titleCommentCount.innerText = "0";
+        return;
+    }
+
+    const currentComments = videoData.comments || [];
     commentsListBox.innerHTML = "";
     
-    savedComments.forEach((data) => {
+    currentComments.forEach((data) => {
         const timeString = formatCommentTime(data.createdAt);
         const commentItem = document.createElement('div');
         commentItem.className = 'comment-item-block';
@@ -101,7 +146,7 @@ function renderComments() {
         commentsListBox.appendChild(commentItem);
     });
 
-    if (savedComments.length === 0) {
+    if (currentComments.length === 0) {
         commentsListBox.innerHTML = `
             <div class="no-comments-msg" id="comments-empty-msg">
                 Будьте первым, кто оставит комментарий! 💬
@@ -109,9 +154,5 @@ function renderComments() {
         `;
     }
 
-    if (titleCommentCount) titleCommentCount.innerText = savedComments.length;
-    if (rightBarCommentCount) rightBarCommentCount.innerText = savedComments.length;
+    if (titleCommentCount) titleCommentCount.innerText = currentComments.length;
 }
-
-// Запускаем отрисовку сразу при старте сайта
-renderComments();

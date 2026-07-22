@@ -10,43 +10,9 @@
 <body>
 
     <!-- ================= ЭКРАН 1: ЛЕНТА ВИДЕО ================= -->
+    <!-- Изменено: теперь внутри находится только чистый контейнер для бесконечного скролла -->
     <div id="screen-feed" class="tiktok-container">
-        <div class="video-card">
-            <!-- Контейнер для отслеживания двойного клика -->
-            <div class="video-click-area" id="video-area">
-                <video id="main-player" loop playsinline autoplay></video>
-                
-                <!-- Сюда JS будет динамически вставлять сердечки при двойном тапе -->
-                <div class="heart-animation-container" id="heart-box"></div>
-            </div>
-            
-            <div class="no-video-msg" id="upload-hint">
-                <h3>Добро пожаловать в Tyk Tyk! 👋</h3>
-                <br>
-                <p>Нажми на кнопку <b>[+]</b> внизу и выбери видео из галереи своего iPhone!</p>
-            </div>
-            
-            <div class="action-buttons">
-                <div class="button-item" id="like-button-right" onclick="toggleLike()">
-                    <div class="button-icon">❤️</div>
-                    <span class="count" id="like-count">0</span>
-                </div>
-                <!-- Кнопка для открытия шторки комментариев -->
-                <div class="button-item" id="btn-comments-open">
-                    <div class="button-icon">💬</div>
-                    <span class="count" id="right-bar-comment-count">0</span>
-                </div>
-                <div class="button-item" onclick="shareVideo()">
-                    <div class="button-icon">➡️</div>
-                    <span class="count">Поделиться</span>
-                </div>
-            </div>
-
-            <div class="video-sidebar">
-                <div class="username">@dima0major</div>
-                <div class="description">Твой личный Tyk Tyk. Облачная база Firebase подключена! ☁️</div>
-            </div>
-        </div>
+        <div id="video-feed" style="width: 100%; height: 100%; overflow-y: scroll; scroll-snap-type: y mandatory; -webkit-overflow-scrolling: touch;"></div>
     </div>
 
     <!-- ================= ЭКРАН 2: ПРОФИЛЬ ПОЛЬЗОВАТЕЛЯ ================= -->

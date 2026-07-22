@@ -1,94 +1,194 @@
-// Стабильная логика загрузки видео и базового плеера для iOS
+// Стабильная логика динамической вертикальной бесконечной ленты для iOS
 const fileInput = document.getElementById('video-upload-input');
-const videoPlayer = document.getElementById('main-player');
-const uploadHint = document.getElementById('upload-hint');
 const profileGrid = document.getElementById('profile-grid');
+const feedContainer = document.getElementById('video-feed');
 
-// Массив для хранения всех загруженных видео-ссылок
-let uploadedVideos = [];
+// Экспортируем массив для доступа из других модулей (likes.js, comments.js)
+export let uploadedVideos = [];
+export let activeVideoIndex = 0;
 
-// Логика подгрузки твоего видео в плеер
-if (fileInput) {
+document.addEventListener("DOMContentLoaded", () => {
+    initFeed();
+    setupUpload();
+    setupAutoplayObserver();
+});
+
+// Инициализация ленты: если видео нет — показываем твою подсказку
+function initFeed() {
+    if (!feedContainer) return;
+    feedContainer.innerHTML = "";
+
+    if (uploadedVideos.length === 0) {
+        feedContainer.innerHTML = `
+            <div class="no-video-msg" id="upload-hint" style="display: flex; flex-direction: column; align-items: center; justify-content: center; height: 100%; text-align: center; padding: 20px;">
+                <h3>Добро пожаловать в Tyk Tyk! 👋</h3>
+                <br>
+                <p>Нажми на кнопку <b>[+]</b> внизу и выбери видео из галереи своего iPhone!</p>
+            </div>
+        `;
+        return;
+    }
+
+    // Собираем ленту из массива роликов, используя твои оригинальные классы
+    uploadedVideos.forEach((video, index) => {
+        const card = document.createElement("div");
+        card.className = "video-card";
+        card.setAttribute("data-index", index);
+        card.style.width = "100%";
+        card.style.height = "100%";
+        card.style.scrollSnapAlign = "start";
+        card.style.position = "relative";
+
+        card.innerHTML = `
+            <div class="video-click-area" data-index="${index}">
+                <video src="${video.url}" loop playsinline style="width:100%; height:100%; object-fit:cover;"></video>
+                <div class="heart-animation-container"></div>
+            </div>
+            
+            <div class="action-buttons">
+                <div class="button-item like-btn ${video.isLiked ? 'liked' : ''}" data-index="${index}">
+                    <div class="button-icon">${video.isLiked ? '❤️' : '🤍'}</div>
+                    <span class="count like-count">${video.likes}</span>
+                </div>
+                <div class="button-item comment-btn" data-index="${index}">
+                    <div class="button-icon">💬</div>
+                    <span class="count comment-count">${video.comments ? video.comments.length : 0}</span>
+                </div>
+                <div class="button-item share-btn">
+                    <div class="button-icon">➡️</div>
+                    <span class="count">Поделиться</span>
+                </div>
+            </div>
+
+            <div class="video-sidebar">
+                <div class="username">${video.author}</div>
+                <div class="description">${video.description}</div>
+            </div>
+        `;
+        feedContainer.appendChild(card);
+    });
+}
+
+// Слушатель загрузки видео через [+]
+function setupUpload() {
+    if (!fileInput) return;
+    
     fileInput.addEventListener('change', function() {
-        const file = this.files[0]; // Берем первый выбранный файл напрямую
+        const file = this.files[0];
         if (file) {
-            // Создаем локальную временную ссылку на файл из галереи Айфона
             const videoURL = URL.createObjectURL(file);
             
-            // Сохраняем ссылку в наш массив
-            uploadedVideos.push(videoURL);
+            // Создаем структурированный объект ролика
+            const newVideo = {
+                id: Date.now().toString(),
+                url: videoURL,
+                author: '@dima0major',
+                description: `Твой личный Tyk Tyk. Ролик #${uploadedVideos.length + 1} в ленте! 🔥`,
+                likes: 0,
+                isLiked: false,
+                comments: []
+            };
             
-            // Включаем видео в главном плеере
-            playSelectedVideo(videoURL);
+            uploadedVideos.push(newVideo);
+            
+            // Перестраиваем ленту
+            initFeed();
 
-            // Удаляем надпись "Нет видео", если она есть на экране профиля
+            // Удаляем заглушку из профиля
             const emptyMsg = document.getElementById('grid-empty-msg');
-            if (emptyMsg) {
-                emptyMsg.remove();
-            }
+            if (emptyMsg) emptyMsg.remove();
 
-            // Создаем элемент миниатюры для сетки профиля
-            const gridItem = document.createElement('div');
-            gridItem.className = 'grid-item';
-            
-            // Создаем маленькое видео без звука для превью
-            const previewVideo = document.createElement('video');
-            previewVideo.src = videoURL;
-            previewVideo.muted = true;
-            previewVideo.playsInline = true;
-            previewVideo.style.width = '100%';
-            previewVideo.style.height = '100%';
-            previewVideo.style.objectFit = 'cover';
-            
-            // Маленький значок просмотров поверх видео
-            const viewsLabel = document.createElement('span');
-            viewsLabel.innerHTML = '🎬 新'; 
-            
-            gridItem.appendChild(previewVideo);
-            gridItem.appendChild(viewsLabel);
-            
-            // Клик по превью в профиле запускает это видео в плеере
-            gridItem.addEventListener('click', () => {
-                playSelectedVideo(videoURL);
-            });
+            // Добавляем миниатюру в профиль
+            createProfileGridItem(videoURL, uploadedVideos.length - 1);
 
-            // Вставляем новое видео в самое начало сетки профиля
-            if (profileGrid) {
-                profileGrid.insertBefore(gridItem, profileGrid.firstChild);
-            }
+            // Мгновенно скроллим к новому видео и запускаем его
+            const newIndex = uploadedVideos.length - 1;
+            setTimeout(() => playVideoAtIndex(newIndex), 200);
+
+            // Перенаправляем на Главную ленту через твою кнопку
+            const btnHome = document.getElementById('btn-home');
+            if (btnHome) btnHome.click();
         }
     });
 }
 
-// Функция запуска конкретного видео на главном экране
-function playSelectedVideo(url) {
-    if (videoPlayer) {
-        videoPlayer.src = url;
-        if (uploadHint) uploadHint.style.display = 'none';
-        videoPlayer.muted = false; // Сразу включаем звук при ручной загрузке
-        videoPlayer.load();
-        
-        // Жесткий запуск для iOS Safari
-        const playPromise = videoPlayer.play();
-        if (playPromise !== undefined) {
-            playPromise.catch(error => {
-                console.log("iOS заблокировал автоплей, нужен тап по экрану:", error);
-            });
-        }
-    }
-    
-    // Сброс лайков справа для нового ролика
-    const likeCountSpan = document.getElementById('like-count');
-    const likeBtnRight = document.getElementById('like-button-right');
-    if (likeCountSpan) likeCountSpan.innerText = "0";
-    if (likeBtnRight) likeBtnRight.classList.remove('liked');
+// Создание миниатюры в профиле
+function createProfileGridItem(url, index) {
+    if (!profileGrid) return;
 
-    // Автоматически перенаправляем пользователя на главную ленту
-    const btnHome = document.getElementById('btn-home');
-    if (btnHome) btnHome.click();
+    const gridItem = document.createElement('div');
+    gridItem.className = 'grid-item';
+    
+    const previewVideo = document.createElement('video');
+    previewVideo.src = url;
+    previewVideo.muted = true;
+    previewVideo.playsInline = true;
+    previewVideo.style.width = '100%';
+    previewVideo.style.height = '100%';
+    previewVideo.style.objectFit = 'cover';
+    
+    const viewsLabel = document.createElement('span');
+    viewsLabel.innerHTML = '🎬 新'; 
+    
+    gridItem.appendChild(previewVideo);
+    gridItem.appendChild(viewsLabel);
+    
+    // Клик по плитке в профиле плавно переключит ленту на этот ролик
+    gridItem.addEventListener('click', () => {
+        const btnHome = document.getElementById('btn-home');
+        if (btnHome) btnHome.click();
+        setTimeout(() => playVideoAtIndex(index), 100);
+    });
+
+    profileGrid.insertBefore(gridItem, profileGrid.firstChild);
 }
 
-// Функция "Поделиться"
+// Плавный скролл и запуск видео на ленте по индексу
+export function playVideoAtIndex(index) {
+    const cards = document.querySelectorAll("#video-feed .video-card");
+    if (cards[index]) {
+        cards[index].scrollIntoView({ behavior: "smooth" });
+        const video = cards[index].querySelector("video");
+        if (video) {
+            video.muted = false;
+            video.play().catch(() => {});
+        }
+    }
+}
+
+// Наблюдатель автоматического включения/выключения звука и плеера при свайпе
+function setupAutoplayObserver() {
+    const observer = new IntersectionObserver((entries) => {
+        entries.forEach(entry => {
+            const video = entry.target.querySelector("video");
+            const index = parseInt(entry.target.getAttribute("data-index"));
+
+            if (entry.isIntersecting && video) {
+                video.muted = false;
+                video.play().catch(() => {});
+                activeVideoIndex = index;
+            } else if (video) {
+                video.pause();
+                video.currentTime = 0; // Сброс на начало
+            }
+        });
+    }, { threshold: 0.8 }); // Видео активируется, если видно на 80% экрана
+
+    const mutationObserver = new MutationObserver(() => {
+        document.querySelectorAll("#video-feed .video-card").forEach(card => observer.observe(card));
+    });
+    mutationObserver.observe(feedContainer, { childList: true });
+}
+
+// Глобальный маршрутизатор кликов по ленте (Поделиться)
+if (feedContainer) {
+    feedContainer.addEventListener('click', (e) => {
+        if (e.target.closest('.share-btn')) {
+            shareVideo();
+        }
+    });
+}
+
 function shareVideo() {
     if (navigator.share) {
         navigator.share({

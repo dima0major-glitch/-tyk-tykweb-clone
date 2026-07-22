@@ -2,39 +2,145 @@
 <html lang="ru">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Мой Онлайн Кинотеатр</title>
-    <style>
-        body { background-color: #141414; color: white; font-family: Arial, sans-serif; text-align: center; padding: 20px; }
-        .search-box { margin-bottom: 20px; }
-        input { padding: 10px; width: 60%; border: none; border-radius: 4px; }
-        button { padding: 10px 20px; background: #E50914; color: white; border: none; border-radius: 4px; cursor: pointer; }
-        .player-container { margin-top: 20px; display: flex; justify-content: center; }
-        iframe { width: 100%; max-width: 800px; height: 450px; border: none; background: #000; }
-    </style>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Tyk Tyk</title>
+    <!-- Подключаем внешний файл со стилями -->
+    <link rel="stylesheet" href="style.css">
 </head>
 <body>
 
-    <h1>Онлайн Кинотеатр</h1>
-    
-    <div class="search-box">
-        <input type="text" id="movie-title" placeholder="Введите название фильма...">
-        <button onclick="searchMovie()">Смотреть</button>
-    </div>
-
-    <div class="player-container">
-        <!-- Бесплатный тестовый плеер, подтягивающий трейлеры/видео -->
-        <iframe id="video-player" src="https://youtube.com" allowfullscreen></iframe>
-    </div>
-
-    <script>
-        function searchMovie() {
-            const title = document.getElementById('movie-title').value;
-            if (!title) return alert('Введите название!');
+    <!-- Лента вертикальных видео -->
+    <div class="tiktok-container">
+        
+        <!-- РОЛИК 1 -->
+        <div class="video-card">
+            <video src="https://mixkit.co" loop playsinline autoplay muted></video>
             
-            // Тестовая смена видео на трейлеры через поиск YouTube (для примера без пиратских баз)
-            const player = document.getElementById('video-player');
-            player.src = `https://youtube.com{encodeURIComponent(title + ' трейлер')}`;
+            <div class="action-buttons">
+                <div class="button-item" onclick="toggleLike(this)">
+                    <div class="button-icon">❤️</div>
+                    <span class="count">12.5K</span>
+                </div>
+                <div class="button-item" onclick="alert('Комментарии в разработке!')">
+                    <div class="button-icon">💬</div>
+                    <span class="count">342</span>
+                </div>
+                <div class="button-item" onclick="shareVideo()">
+                    <div class="button-icon">➡️</div>
+                    <span class="count">Поделиться</span>
+                </div>
+            </div>
+
+            <div class="video-sidebar">
+                <div class="username">@dima0major</div>
+                <div class="description">Мой первый ролик в Tyk Tyk! Нажми на экран, чтобы включить звук 🔊 #coding #pwa #tiktok</div>
+            </div>
+        </div>
+
+        <!-- РОЛИК 2 -->
+        <div class="video-card">
+            <video src="https://mixkit.co" loop playsinline></video>
+            
+            <div class="action-buttons">
+                <div class="button-item" onclick="toggleLike(this)">
+                    <div class="button-icon">❤️</div>
+                    <span class="count">8.1K</span>
+                </div>
+                <div class="button-item" onclick="alert('Комментарии в разработке!')">
+                    <div class="button-icon">💬</div>
+                    <span class="count">98</span>
+                </div>
+                <div class="button-item" onclick="shareVideo()">
+                    <div class="button-icon">➡️</div>
+                    <span class="count">Поделиться</span>
+                </div>
+            </div>
+
+            <div class="video-sidebar">
+                <div class="username">@it_developer</div>
+                <div class="description">Это создано полностью через браузер телефона. Магнитный свайп работает идеально! 🔥</div>
+            </div>
+        </div>
+
+    </div>
+
+    <!-- Нижнее меню навигации -->
+    <div class="bottom-nav">
+        <div class="nav-item active">
+            <span class="nav-icon">🏠</span>
+            <span>Главная</span>
+        </div>
+        <div class="nav-item" onclick="alert('Поиск скоро появится')">
+            <span class="nav-icon">🔍</span>
+            <span>Интересное</span>
+        </div>
+        <div class="nav-item" onclick="alert('Тут будет загрузка видео')">
+            <div class="nav-create">+</div>
+        </div>
+        <div class="nav-item" onclick="alert('Входящие пусты')">
+            <span class="nav-icon">⚡</span>
+            <span>Входящие</span>
+        </div>
+        <div class="nav-item" onclick="alert('Профиль пользователя')">
+            <span class="nav-icon">👤</span>
+            <span>Профиль</span>
+        </div>
+    </div>
+
+    <!-- БЛОК СЦЕНАРИЕВ (JavaScript) -->
+    <script>
+        const container = document.querySelector('.tiktok-container');
+        const videos = document.querySelectorAll('video');
+
+        // Управление воспроизведением при скролле
+        container.addEventListener('scroll', () => {
+            videos.forEach(video => {
+                const rect = video.getBoundingClientRect();
+                if (rect.top >= -50 && rect.top < window.innerHeight / 2) {
+                    video.play().catch(() => {});
+                } else {
+                    video.pause();
+                }
+            });
+        });
+
+        // Включение звука и пауза по клику
+        videos.forEach(video => {
+            video.addEventListener('click', () => {
+                if (video.muted) {
+                    video.muted = false;
+                }
+                if (video.paused) {
+                    video.play();
+                } else {
+                    video.pause();
+                }
+            });
+        });
+
+        // Система лайков
+        function toggleLike(element) {
+            element.classList.toggle('liked');
+            const countSpan = element.querySelector('.count');
+            let currentCount = parseFloat(countSpan.innerText);
+            
+            if (element.classList.contains('liked')) {
+                if (!isNaN(currentCount)) countSpan.innerText = (currentCount + 0.1).toFixed(1) + 'K';
+            } else {
+                if (!isNaN(currentCount)) countSpan.innerText = (currentCount - 0.1).toFixed(1) + 'K';
+            }
+        }
+
+        // Поделиться роликом
+        function shareVideo() {
+            if (navigator.share) {
+                navigator.share({
+                    title: 'Смотри Tyk Tyk!',
+                    url: window.location.href
+                }).catch(() => {});
+            } else {
+                alert('Ссылка скопирована!');
+            }
         }
     </script>
 </body>

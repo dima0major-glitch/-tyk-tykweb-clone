@@ -1,26 +1,36 @@
-// Стабильная логика динамической вертикальной бесконечной ленты для iOS
+// Стабильная логика бесконечной ленты с автоплеем для iOS
 const fileInput = document.getElementById('video-upload-input');
 const profileGrid = document.getElementById('profile-grid');
 const feedContainer = document.getElementById('video-feed');
 
-// Экспортируем массив для доступа из других модулей (likes.js, comments.js)
-export let uploadedVideos = [];
+// Загружаем сохраненное состояние, если оно есть, иначе пустой массив
+export let uploadedVideos = JSON.parse(localStorage.getItem('tyk_tyk_videos_state')) || [];
 export let activeVideoIndex = 0;
 
 document.addEventListener("DOMContentLoaded", () => {
     initFeed();
     setupUpload();
     setupAutoplayObserver();
+    
+    // Если в памяти уже были видео, перерисуем и сетку профиля
+    if (uploadedVideos.length > 0 && profileGrid) {
+        const emptyMsg = document.getElementById('grid-empty-msg');
+        if (emptyMsg) emptyMsg.remove();
+        profileGrid.innerHTML = "";
+        uploadedVideos.forEach((video, index) => {
+            createProfileGridItem(video.url, index);
+        });
+    }
 });
 
-// Инициализация ленты: если видео нет — показываем твою подсказку
-function initFeed() {
+// Инициализация ленты
+export function initFeed() {
     if (!feedContainer) return;
     feedContainer.innerHTML = "";
 
     if (uploadedVideos.length === 0) {
         feedContainer.innerHTML = `
-            <div class="no-video-msg" id="upload-hint" style="display: flex; flex-direction: column; align-items: center; justify-content: center; height: 100%; text-align: center; padding: 20px;">
+            <div class="no-video-msg" id="upload-hint" style="display: flex; flex-direction: column; align-items: center; justify-content: center; height: 100%; text-align: center; padding: 20px; color: #fff;">
                 <h3>Добро пожаловать в Tyk Tyk! 👋</h3>
                 <br>
                 <p>Нажми на кнопку <b>[+]</b> внизу и выбери видео из галереи своего iPhone!</p>
@@ -29,7 +39,6 @@ function initFeed() {
         return;
     }
 
-    // Собираем ленту из массива роликов, используя твои оригинальные классы
     uploadedVideos.forEach((video, index) => {
         const card = document.createElement("div");
         card.className = "video-card";
@@ -39,13 +48,14 @@ function initFeed() {
         card.style.scrollSnapAlign = "start";
         card.style.position = "relative";
 
+        // Добавлено: muted, playsinline, webkit-playsinline — жесткое требование Apple для автоплея
         card.innerHTML = `
-            <div class="video-click-area" data-index="${index}">
-                <video src="${video.url}" loop playsinline style="width:100%; height:100%; object-fit:cover;"></video>
+            <div class="video-click-area" data-index="${index}" style="width:100%; height:100%; position:absolute; top:0; left:0; z-index:1;">
+                <video src="${video.url}" loop muted playsinline webkit-playsinline style="width:100%; height:100%; object-fit:cover;"></video>
                 <div class="heart-animation-container"></div>
             </div>
             
-            <div class="action-buttons">
+            <div class="action-buttons" style="z-index:2; position:absolute;">
                 <div class="button-item like-btn ${video.isLiked ? 'liked' : ''}" data-index="${index}">
                     <div class="button-icon">${video.isLiked ? '❤️' : '🤍'}</div>
                     <span class="count like-count">${video.likes}</span>
@@ -60,8 +70,8 @@ function initFeed() {
                 </div>
             </div>
 
-            <div class="video-sidebar">
-                <div class="username">${video.author}</div>
+            <div class="video-sidebar" style="z-index:2; position:absolute;">
+                <div class="username">${video.author || '@dimka_0770'}</div>
                 <div class="description">${video.description}</div>
             </div>
         `;
@@ -69,7 +79,6 @@ function initFeed() {
     });
 }
 
-// Слушатель загрузки видео через [+]
 function setupUpload() {
     if (!fileInput) return;
     
@@ -77,52 +86,49 @@ function setupUpload() {
         const file = this.files[0];
         if (file) {
             const videoURL = URL.createObjectURL(file);
+            const currentTag = document.querySelector('.profile-tag') ? document.querySelector('.profile-tag').innerText : "@dimka_0770";
             
-            // Создаем структурированный объект ролика
             const newVideo = {
                 id: Date.now().toString(),
                 url: videoURL,
-                author: '@dima0major',
-                description: `Твой личный Tyk Tyk. Ролик #${uploadedVideos.length + 1} в ленте! 🔥`,
+                author: currentTag,
+                description: `Ролик #${uploadedVideos.length + 1} в ленте! 🔥`,
                 likes: 0,
                 isLiked: false,
                 comments: []
             };
             
             uploadedVideos.push(newVideo);
+            localStorage.setItem('tyk_tyk_videos_state', JSON.stringify(uploadedVideos));
             
-            // Перестраиваем ленту
             initFeed();
 
-            // Удаляем заглушку из профиля
             const emptyMsg = document.getElementById('grid-empty-msg');
             if (emptyMsg) emptyMsg.remove();
 
-            // Добавляем миниатюру в профиль
             createProfileGridItem(videoURL, uploadedVideos.length - 1);
 
-            // Мгновенно скроллим к новому видео и запускаем его
             const newIndex = uploadedVideos.length - 1;
-            setTimeout(() => playVideoAtIndex(newIndex), 200);
+            setTimeout(() => playVideoAtIndex(newIndex), 300);
 
-            // Перенаправляем на Главную ленту через твою кнопку
             const btnHome = document.getElementById('btn-home');
             if (btnHome) btnHome.click();
         }
     });
 }
 
-// Создание миниатюры в профиле
 function createProfileGridItem(url, index) {
     if (!profileGrid) return;
 
     const gridItem = document.createElement('div');
     gridItem.className = 'grid-item';
+    gridItem.setAttribute('data-index', index);
     
     const previewVideo = document.createElement('video');
     previewVideo.src = url;
     previewVideo.muted = true;
     previewVideo.playsInline = true;
+    previewVideo.webkitPlaysInline = true;
     previewVideo.style.width = '100%';
     previewVideo.style.height = '100%';
     previewVideo.style.objectFit = 'cover';
@@ -133,54 +139,71 @@ function createProfileGridItem(url, index) {
     gridItem.appendChild(previewVideo);
     gridItem.appendChild(viewsLabel);
     
-    // Клик по плитке в профиле плавно переключит ленту на этот ролик
     gridItem.addEventListener('click', () => {
         const btnHome = document.getElementById('btn-home');
         if (btnHome) btnHome.click();
-        setTimeout(() => playVideoAtIndex(index), 100);
+        setTimeout(() => playVideoAtIndex(index), 200);
     });
 
     profileGrid.insertBefore(gridItem, profileGrid.firstChild);
 }
 
-// Плавный скролл и запуск видео на ленте по индексу
 export function playVideoAtIndex(index) {
     const cards = document.querySelectorAll("#video-feed .video-card");
     if (cards[index]) {
-        cards[index].scrollIntoView({ behavior: "smooth" });
+        cards[index].scrollIntoView({ behavior: "smooth", block: "start" });
+        
+        // Гарантируем остановку остальных видео
+        document.querySelectorAll("#video-feed video").forEach(v => {
+            v.pause();
+            v.muted = true;
+        });
+
         const video = cards[index].querySelector("video");
         if (video) {
-            video.muted = false;
-            video.play().catch(() => {});
+            video.muted = false; // Звук включится, так как это действие по клику
+            const playPromise = video.play();
+            if (playPromise !== undefined) {
+                playPromise.catch(error => {
+                    console.log("iOS требует тапа для звука, включаем без звука:", error);
+                    video.muted = true;
+                    video.play().catch(() => {});
+                });
+            }
         }
+        activeVideoIndex = index;
     }
 }
 
-// Наблюдатель автоматического включения/выключения звука и плеера при свайпе
 function setupAutoplayObserver() {
+    if (!feedContainer) return;
+
     const observer = new IntersectionObserver((entries) => {
         entries.forEach(entry => {
             const video = entry.target.querySelector("video");
             const index = parseInt(entry.target.getAttribute("data-index"));
 
             if (entry.isIntersecting && video) {
-                video.muted = false;
+                // При автоскролле запускаем БЕЗ звука, чтобы iOS не блокировал плеер
+                video.muted = true; 
                 video.play().catch(() => {});
                 activeVideoIndex = index;
             } else if (video) {
                 video.pause();
-                video.currentTime = 0; // Сброс на начало
+                video.currentTime = 0;
             }
         });
-    }, { threshold: 0.8 }); // Видео активируется, если видно на 80% экрана
+    }, { threshold: 0.6 }); // Снизили порог до 60% для более четкого срабатывания на малых экранах
 
     const mutationObserver = new MutationObserver(() => {
         document.querySelectorAll("#video-feed .video-card").forEach(card => observer.observe(card));
     });
     mutationObserver.observe(feedContainer, { childList: true });
+    
+    // Сразу вешаем на существующие
+    document.querySelectorAll("#video-feed .video-card").forEach(card => observer.observe(card));
 }
 
-// Глобальный маршрутизатор кликов по ленте (Поделиться)
 if (feedContainer) {
     feedContainer.addEventListener('click', (e) => {
         if (e.target.closest('.share-btn')) {

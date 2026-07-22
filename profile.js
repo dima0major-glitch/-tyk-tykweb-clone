@@ -1,67 +1,63 @@
-// Логика управления экраном профиля и переключения вкладок
+import { uploadedVideos, activeVideoIndex, initFeed } from './app.js';
 
-const btnHome = document.getElementById('btn-home');
-const btnProfile = document.getElementById('btn-profile');
-const screenFeed = document.getElementById('screen-feed');
-const screenProfile = document.getElementById('screen-profile');
-const mainVideo = document.getElementById('main-player');
+document.addEventListener("DOMContentLoaded", () => {
+    setupNavigation();
+    setupProfileTabs();
+});
 
-// Переключатели вкладок внутри самого профиля
-const tabMyVideos = document.getElementById('tab-my-videos');
-const tabLikedVideos = document.getElementById('tab-liked-videos');
-const gridMyVideos = document.getElementById('profile-grid');
-const gridLikedVideos = document.getElementById('liked-grid');
+function setupNavigation() {
+    const homeBtn = document.getElementById("btn-home");
+    const profileBtn = document.getElementById("btn-profile");
+    const feedScreen = document.getElementById("screen-feed");
+    const profileScreen = document.getElementById("screen-profile");
 
-// 1. Переход в профиль
-if (btnProfile) {
-    btnProfile.addEventListener('click', () => {
-        btnHome.classList.remove('active');
-        btnProfile.classList.add('active');
-        
-        screenFeed.classList.add('hidden');
-        screenProfile.classList.remove('hidden');
-        
-        if (mainVideo) mainVideo.pause();
-    });
-}
-
-// 2. Возврат на главную ленту
-if (btnHome) {
-    btnHome.addEventListener('click', () => {
-        btnProfile.classList.remove('active');
-        btnHome.classList.add('active');
-        
-        screenProfile.classList.add('hidden');
-        screenFeed.classList.remove('hidden');
-        
-        if (mainVideo && mainVideo.src) {
-            mainVideo.play().catch(() => {});
-        }
-    });
-}
-
-// 3. Клик на вкладку "Мои Видео" внутри профиля
-if (tabMyVideos) {
-    tabMyVideos.addEventListener('click', () => {
-        if (tabLikedVideos && gridLikedVideos && gridMyVideos) {
-            tabLikedVideos.classList.remove('active');
-            tabMyVideos.classList.add('active');
+    if (homeBtn && profileBtn && feedScreen && profileScreen) {
+        homeBtn.addEventListener("click", () => {
+            homeBtn.classList.add("active");
+            profileBtn.classList.remove("active");
             
-            gridLikedVideos.classList.add('hidden');
-            gridMyVideos.classList.remove('hidden');
-        }
-    });
+            feedScreen.classList.remove("hidden");
+            profileScreen.classList.add("hidden");
+            
+            // Запускаем видео на текущем индексе при возврате на главную
+            const activeCard = document.querySelector(`#video-feed .video-card[data-index="${activeVideoIndex}"] video`);
+            if (activeCard) {
+                activeCard.play().catch(() => {});
+            }
+        });
+
+        profileBtn.addEventListener("click", () => {
+            profileBtn.classList.add("active");
+            homeBtn.classList.remove("active");
+            
+            profileScreen.classList.remove("hidden");
+            feedScreen.classList.add("hidden");
+
+            // Ставим на паузу все ролики из ленты
+            document.querySelectorAll("#video-feed video").forEach(v => v.pause());
+        });
+    }
 }
 
-// 4. Клик на вкладку "Понравилось" внутри профиля
-if (tabLikedVideos) {
-    tabLikedVideos.addEventListener('click', () => {
-        if (tabMyVideos && gridMyVideos && gridLikedVideos) {
-            tabMyVideos.classList.remove('active');
-            tabLikedVideos.classList.add('active');
-            
-            gridMyVideos.classList.add('hidden');
-            gridLikedVideos.classList.remove('hidden');
-        }
-    });
+function setupProfileTabs() {
+    const tabMy = document.getElementById("tab-my-videos");
+    const tabLiked = document.getElementById("tab-liked-videos");
+    const galleryMy = document.getElementById("profile-grid");
+    const galleryLiked = document.getElementById("liked-grid");
+
+    if (tabMy && tabLiked) {
+        tabMy.addEventListener("click", () => {
+            tabMy.classList.add("active");
+            tabLiked.classList.remove("active");
+            if (galleryMy) galleryMy.classList.remove("hidden");
+            if (galleryLiked) galleryLiked.classList.add("hidden");
+        });
+
+        tabLiked.addEventListener("click", () => {
+            tabLiked.classList.add("active");
+            tabMy.classList.remove("active");
+            if (galleryLiked) galleryLiked.classList.remove("hidden");
+            if (galleryMy) galleryMy.classList.add("hidden");
+        });
+    }
 }

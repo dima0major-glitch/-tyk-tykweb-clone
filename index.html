@@ -31,10 +31,10 @@
                     <div class="button-icon">❤️</div>
                     <span class="count" id="like-count">0</span>
                 </div>
-                <!-- Исправленная кнопка для открытия шторки комментариев -->
+                <!-- Кнопка для открытия шторки комментариев -->
                 <div class="button-item" id="btn-comments-open">
                     <div class="button-icon">💬</div>
-                    <span class="count">0</span>
+                    <span class="count" id="right-bar-comment-count">0</span>
                 </div>
                 <div class="button-item" onclick="shareVideo()">
                     <div class="button-icon">➡️</div>
@@ -44,7 +44,7 @@
 
             <div class="video-sidebar">
                 <div class="username">@dima0major</div>
-                <div class="description">Твой личный Tyk Tyk. Видео добавляются в профиль! 🚀</div>
+                <div class="description">Твой личный Tyk Tyk. Облачная база Firebase подключена! ☁️</div>
             </div>
         </div>
     </div>
@@ -80,9 +80,8 @@
             <div class="tab-item">❤️ Понравилось</div>
         </div>
 
-        <!-- Сетка выложенных роликов (динамическая) -->
+        <!-- Сетка выложенных роликов -->
         <div class="video-grid" id="profile-grid">
-            <!-- Сюда скрипт app.js будет автоматически добавлять превью твоих видео -->
             <div class="grid-item" id="grid-empty-msg" style="grid-column: span 3; background: transparent; font-size: 14px; color: #8a8a8f; text-align: center; padding: 40px 0;">
                 У тебя пока нет видео. Нажми [+] и загрузи первое! 😉
             </div>
@@ -116,24 +115,20 @@
         </div>
     </div>
 
-    <!-- ================= ШТОРКА КОММЕНТАРИЕВ (TIKTOK STYLE) ================= -->
+    <!-- ================= ШТОРКА КОММЕНТАРИЕВ ================= -->
     <div id="comments-sheet" class="comments-overlay hidden">
         <div class="comments-content">
-            <!-- Шапка шторки с кнопкой закрытия -->
             <div class="comments-header">
                 <span>Комментарии (<span id="comments-count-title">0</span>)</span>
                 <button id="btn-comments-close">✕</button>
             </div>
             
-            <!-- Список самих комментариев -->
             <div class="comments-list" id="comments-list-box">
-                <!-- Если комментов нет, покажем заглушку -->
                 <div class="no-comments-msg" id="comments-empty-msg">
                     Будьте первым, кто оставит комментарий! 💬
                 </div>
             </div>
             
-            <!-- Поле ввода внизу шторки -->
             <div class="comments-input-area">
                 <input type="text" id="input-comment-text" placeholder="Добавить комментарий...">
                 <button id="btn-comment-send">▲</button>
@@ -152,7 +147,6 @@
             <span>Интересное</span>
         </div>
         
-        <!-- Кнопка Плюс (Загрузка) с прозрачным инпутом внутри -->
         <div class="nav-item" id="plus-btn">
             <div class="nav-create">
                 +
@@ -170,11 +164,14 @@
         </div>
     </div>
 
-    <!-- ПОДКЛЮЧАЕМ СЦЕНАРИИ (По порядку) -->
-    <script src="./app.js"></script>
-    <script src="./profile.js"></script>
-    <script src="./likes.js"></script>
-    <script src="./edit-profile.js"></script>
-    <script src="./comments.js"></script>
+    <!-- ПОДКЛЮЧАЕМ Firebase Конфигурацию как Модуль -->
+    <script type="module" src="./firebase-config.js"></script>
+    
+    <!-- ПОДКЛЮЧАЕМ ОСТАЛЬНЫЕ СЦЕНАРИИ КАК МОДУЛИ -->
+    <script type="module" src="./app.js"></script>
+    <script type="module" src="./profile.js"></script>
+    <script type="module" src="./likes.js"></script>
+    <script type="module" src="./edit-profile.js"></script>
+    <script type="module" src="./comments.js"></script>
 </body>
 </html>

@@ -1,4 +1,4 @@
-// Чистый автономный модуль ленты Supabase без ломающих импортов
+// Финальный автономный модуль ленты Supabase 
 const fileInput = document.getElementById('video-upload-input');
 const profileGrid = document.getElementById('profile-grid');
 const feedContainer = document.getElementById('video-feed');
@@ -8,6 +8,7 @@ window.activeVideoIndex = 0;
 let isSoundGloballyEnabled = false;
 
 document.addEventListener("DOMContentLoaded", () => {
+    // Цикл ожидания, пока загрузится конфигурация базы
     const checkSupabase = setInterval(() => {
         if (window.supabase) {
             clearInterval(checkSupabase);
@@ -38,7 +39,6 @@ async function listenToCloudFeed() {
     updateProfileGrid();
 }
 
-// Отрисовка карточек ленты из прямых веб-ссылок Supabase
 function initFeed() {
     if (!feedContainer) return;
     feedContainer.innerHTML = "";
@@ -48,7 +48,7 @@ function initFeed() {
             <div class="no-video-msg" id="upload-hint" style="display: flex; flex-direction: column; align-items: center; justify-content: center; height: 100%; text-align: center; padding: 20px; color: #fff;">
                 <h3>Лента пуста ☁️</h3>
                 <br>
-                <p>Нажми на кнопку <b>[+]</b> внизу и загрузи первое полноценное видео в облако Supabase!</p>
+                <p>Нажми на кнопку <b>[+]</b> внизу и загрузи первое видео в Supabase!</p>
             </div>
         `;
         return;
@@ -70,13 +70,13 @@ function initFeed() {
             </div>
             
             <div class="action-buttons" style="z-index:2; position:absolute;">
-                <div class="button-item like-btn ${video.isLiked ? 'liked' : ''}" data-index="${index}">
-                    <div class="button-icon">${video.isLiked ? '❤️' : '🤍'}</div>
+                <div class="button-item like-btn" data-index="${index}">
+                    <div class="button-icon">🤍</div>
                     <span class="count like-count">${video.likes || 0}</span>
                 </div>
                 <div class="button-item comment-btn" data-index="${index}">
                     <div class="button-icon">💬</div>
-                    <span class="count comment-count">${video.comments ? video.comments.length : 0}</span>
+                    <span class="count comment-count">0</span>
                 </div>
                 <div class="button-item share-btn">
                     <div class="button-icon">➡️</div>
@@ -86,7 +86,7 @@ function initFeed() {
 
             <div class="video-sidebar" style="z-index:2; position:absolute;">
                 <div class="username">${video.author || '@dimka_0770'}</div>
-                <div class="description">${video.description || 'Стриминг из Supabase Storage! 🎬'}</div>
+                <div class="description">${video.description || 'Стриминг из Supabase! 🎬'}</div>
             </div>
         `;
         feedContainer.appendChild(card);
@@ -96,16 +96,17 @@ function setupUpload() {
     if (!fileInput) return;
     
     fileInput.addEventListener('change', async function() {
-        const file = this.files[0];
+        const file = this.files[0]; // ИСПРАВЛЕНО: Берем первый файл из массива напрямую
         if (!file || !window.supabase) return;
 
         const btnHome = document.getElementById('btn-home');
-        if (btnHome) btnHome.innerText = "⏳ Загрузка...";
+        if (btnHome) btnHome.innerText = "⏳...";
 
         try {
             const currentTag = document.querySelector('.profile-tag') ? document.querySelector('.profile-tag').innerText : "@dimka_0770";
             const fileName = `${Date.now()}_${file.name}`;
 
+            // Отправка файла в бакет Storage
             const { data: storageData, error: storageError } = await window.supabase
                 .storage
                 .from('videos')
@@ -113,6 +114,7 @@ function setupUpload() {
 
             if (storageError) throw storageError;
 
+            // Генерация публичной ссылки
             const { data: urlData } = window.supabase
                 .storage
                 .from('videos')
@@ -120,13 +122,14 @@ function setupUpload() {
 
             const publicUrl = urlData.publicUrl;
 
+            // Запись данных в таблицу Firestore
             const { error: dbError } = await window.supabase
                 .from('videos')
                 .insert([
                     {
                         url: publicUrl,
                         author: currentTag,
-                        description: `Новый хит в облачной ленте Supabase! 🔥`,
+                        description: `Новый хит в облачной ленте! 🔥`,
                         likes: 0,
                         isLiked: false,
                         comments: [],
@@ -136,12 +139,12 @@ function setupUpload() {
 
             if (dbError) throw dbError;
 
-            console.log("Видео успешно загружено в облако!");
+            console.log("Видео успешно сохранено!");
             listenToCloudFeed(); 
             
         } catch (error) {
-            console.error("Ошибка загрузки:", error.message);
-            alert("Ошибка загрузки. Проверь, что в Supabase создан Бакет с именем videos и у него включен тумблер Public!");
+            console.error("Ошибка:", error.message);
+            alert("Не удалось загрузить. Проверь бакет!");
         } finally {
             if (btnHome) btnHome.innerHTML = "<span class='nav-icon'>🏠</span><span>Главная</span>";
             if (btnHome) btnHome.click();

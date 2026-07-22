@@ -1,0 +1,41 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Мой Онлайн Кинотеатр</title>
+    <style>
+        body { background-color: #141414; color: white; font-family: Arial, sans-serif; text-align: center; padding: 20px; }
+        .search-box { margin-bottom: 20px; }
+        input { padding: 10px; width: 60%; border: none; border-radius: 4px; }
+        button { padding: 10px 20px; background: #E50914; color: white; border: none; border-radius: 4px; cursor: pointer; }
+        .player-container { margin-top: 20px; display: flex; justify-content: center; }
+        iframe { width: 100%; max-width: 800px; height: 450px; border: none; background: #000; }
+    </style>
+</head>
+<body>
+
+    <h1>Онлайн Кинотеатр</h1>
+    
+    <div class="search-box">
+        <input type="text" id="movie-title" placeholder="Введите название фильма...">
+        <button onclick="searchMovie()">Смотреть</button>
+    </div>
+
+    <div class="player-container">
+        <!-- Бесплатный тестовый плеер, подтягивающий трейлеры/видео -->
+        <iframe id="video-player" src="https://youtube.com" allowfullscreen></iframe>
+    </div>
+
+    <script>
+        function searchMovie() {
+            const title = document.getElementById('movie-title').value;
+            if (!title) return alert('Введите название!');
+            
+            // Тестовая смена видео на трейлеры через поиск YouTube (для примера без пиратских баз)
+            const player = document.getElementById('video-player');
+            player.src = `https://youtube.com{encodeURIComponent(title + ' трейлер')}`;
+        }
+    </script>
+</body>
+</html>

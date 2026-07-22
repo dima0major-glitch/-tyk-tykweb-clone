@@ -43,7 +43,7 @@
 
             <div class="video-sidebar">
                 <div class="username">@dima0major</div>
-                <div class="description">Твой личный Tyk Tyk. Разделено по файлам! 🚀</div>
+                <div class="description">Твой личный Tyk Tyk. Видео добавляются в профиль! 🚀</div>
             </div>
         </div>
     </div>
@@ -70,7 +70,7 @@
                 </div>
             </div>
 
-            <!-- Чистая кнопка без старого onclick -->
+            <!-- Кнопка редактирования -->
             <button class="edit-btn">Изменить профиль</button>
         </div>
 
@@ -79,13 +79,12 @@
             <div class="tab-item">❤️ Понравилось</div>
         </div>
 
-        <div class="video-grid">
-            <div class="grid-item">🎬 <span>120K</span></div>
-            <div class="grid-item">🎬 <span>45K</span></div>
-            <div class="grid-item">🎬 <span>312K</span></div>
-            <div class="grid-item">🎬 <span>89K</span></div>
-            <div class="grid-item">🎬 <span>5K</span></div>
-            <div class="grid-item">🎬 <span>67K</span></div>
+        <!-- Сетка выложенных роликов (динамическая) -->
+        <div class="video-grid" id="profile-grid">
+            <!-- Сюда скрипт app.js будет автоматически добавлять превью твоих видео -->
+            <div class="grid-item" id="grid-empty-msg" style="grid-column: span 3; background: transparent; font-size: 14px; color: #8a8a8f; text-align: center; padding: 40px 0;">
+                У тебя пока нет видео. Нажми [+] и загрузи первое! 😉
+            </div>
         </div>
     </div>
 

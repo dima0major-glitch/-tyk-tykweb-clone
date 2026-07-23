@@ -136,86 +136,107 @@ function updateProfileGrid() {
 // ==================== ЧАСТЬ 2: СТАБИЛЬНЫЙ UPLOAD ЧЕРЕЗ SDK С КЛЮЧОМ SB ====================
 
 function setupUpload() {
-    if (!fileInput) return;
+    if (!fileInput) {
+        console.error("Элемент инпута видео-загрузки не найден на странице!");
+        return;
+    }
     
     fileInput.addEventListener('change', async function() {
-        // ЖЕЛЕЗОБЕТОННОЕ ИСПРАВЛЕНИЕ: Добавлен индекс [0], чтобы взять конкретный файл!
-        // Теперь iPhone точно запустит FileReader и не будет молча зависать.
-        const file = this.files[0]; 
-        if (!file || !window.supabase) return;
-
-        const btnHome = document.getElementById('btn-home');
-        if (btnHome) btnHome.innerText = "⏳...";
-
-        // Читаем файл как ArrayBuffer — это убирает любые конфликты песочницы iOS с новыми ключами
-        const reader = new FileReader();
-        
-        reader.onload = async function(event) {
-            try {
-                const currentTag = document.querySelector('.profile-tag') ? document.querySelector('.profile-tag').innerText : "@dimka_0770";
-                
-                const fileExt = file.name ? file.name.split('.').pop().toLowerCase() : 'mp4';
-                const fileName = `${Date.now()}_${Math.random().toString(36).substring(2, 7)}.${fileExt}`;
-
-                // Получаем сырой буфер байтов из оперативной памяти
-                const arrayBuffer = event.target.result;
-
-                // Загружаем через официальный метод SDK, передавая массив байтов (ArrayBuffer)
-                const { data: storageData, error: storageError } = await window.supabase
-                    .storage
-                    .from('videos')
-                    .upload(fileName, arrayBuffer, {
-                        contentType: file.type || 'video/mp4', // Фиксируем тип для плеера QuickTime на iOS
-                        cacheControl: '3600',
-                        upsert: false
-                    });
-
-                if (storageError) throw storageError;
-
-                // Генерация публичной ссылки на видеофайл
-                const { data: urlData } = window.supabase
-                    .storage
-                    .from('videos')
-                    .getPublicUrl(fileName);
-
-                const publicUrl = urlData.publicUrl;
-
-                // Запись метаданных в таблицу базы данных (RLS отключен, проверка пропустит)
-                const { error: dbError } = await window.supabase
-                    .from('videos')
-                    .insert([
-                        {
-                            url: publicUrl,
-                            author: currentTag,
-                            description: `Новый хит в облачной ленте! 🔥`,
-                            likes: 0,
-                            isLiked: false,
-                            comments: [],
-                            createdAt: new Date().toISOString()
-                        }
-                    ]);
-
-                if (dbError) throw dbError;
-
-                console.log("Видео успешно сохранено!");
-                listenToCloudFeed();
-                
-            } catch (error) {
-                console.error("Ошибка при обработке WebKit iOS:", error);
-                alert("Системная ошибка: " + (error.message || JSON.stringify(error)));
-            } finally {
-                if (btnHome) btnHome.innerHTML = "<span class='nav-icon'>🏠</span><span>Главная</span>";
-                if (btnHome) btnHome.click();
+        try {
+            // Проверяем, видит ли iPhone файлы в инпуте
+            if (!this.files || this.files.length === 0) {
+                alert("Отладка: Файлы в инпуте не найдены или выбор отменен!");
+                return;
             }
-        };
 
-        reader.onerror = function() {
-            alert("Ошибка считывания файла с iPhone.");
-            if (btnHome) btnHome.innerHTML = "<span class='nav-icon'>🏠</span><span>Главная</span>";
-        };
+            const file = this.files[0]; 
+            
+            // Проверяем, готов ли клиент базы данных
+            if (!window.supabase) {
+                alert("Отладка: Клиент window.supabase еще не инициализирован!");
+                return;
+            }
 
-        // Запуск чтения конкретного файла в ОЗУ
-        reader.readAsArrayBuffer(file);
+            // Пытаемся поменять статус кнопки на часики
+            const btnHome = document.getElementById('btn-home');
+            if (btnHome) {
+                btnHome.innerText = "⏳...";
+            } else {
+                alert("Отладка: Кнопка #btn-home не найдена в HTML!");
+            }
+
+            // Создаем инструмент чтения файлов
+            const reader = new FileReader();
+            
+            reader.onload = async function(event) {
+                try {
+                    const currentTag = document.querySelector('.profile-tag') ? document.querySelector('.profile-tag').innerText : "@dimka_0770";
+                    
+                    const fileExt = file.name ? file.name.split('.').pop().toLowerCase() : 'mp4';
+                    const fileName = `${Date.now()}_${Math.random().toString(36).substring(2, 7)}.${fileExt}`;
+
+                    // Достаем массив байтов из памяти устройства
+                    const arrayBuffer = event.target.result;
+
+                    // Отправляем бинарник через официальный метод SDK Supabase
+                    const { data: storageData, error: storageError } = await window.supabase
+                        .storage
+                        .from('videos')
+                        .upload(fileName, arrayBuffer, {
+                            contentType: file.type || 'video/mp4',
+                            cacheControl: '3600',
+                            upsert: false
+                        });
+
+                    if (storageError) throw storageError;
+
+                    // Генерируем публичную веб-ссылку
+                    const { data: urlData } = window.supabase
+                        .storage
+                        .from('videos')
+                        .getPublicUrl(fileName);
+
+                    const publicUrl = urlData.publicUrl;
+
+                    // Записываем данные в таблицу бд videos
+                    const { error: dbError } = await window.supabase
+                        .from('videos')
+                        .insert([
+                            {
+                                url: publicUrl,
+                                author: currentTag,
+                                description: `Новый хит в облачной ленте! 🔥`,
+                                likes: 0,
+                                isLiked: false,
+                                comments: [],
+                                createdAt: new Date().toISOString()
+                            }
+                        ]);
+
+                    if (dbError) throw dbError;
+
+                    alert("Успех: Видео успешно сохранено на сервере!");
+                    listenToCloudFeed();
+                    
+                } catch (innerError) {
+                    alert("Ошибка внутри загрузки: " + innerError.message);
+                } finally {
+                    if (btnHome) btnHome.innerHTML = "<span class='nav-icon'>🏠</span><span>Главная</span>";
+                    if (btnHome) btnHome.click();
+                }
+            };
+
+            reader.onerror = function() {
+                alert("Ошибка: Не удалось прочесть файл в память устройства.");
+                if (btnHome) btnHome.innerHTML = "<span class='nav-icon'>🏠</span><span>Главная</span>";
+            };
+
+            // Запускаем асинхронное чтение файла в память
+            reader.readAsArrayBuffer(file);
+
+        } catch (globalError) {
+            alert("Глобальный сбой функции: " + globalError.message);
+        }
     });
 }
 

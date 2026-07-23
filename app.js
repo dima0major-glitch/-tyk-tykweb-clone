@@ -96,7 +96,7 @@ function setupUpload() {
     if (!fileInput) return;
     
     fileInput.addEventListener('change', async function() {
-        // УКАЗАНО СТРОГО: Берем первый конкретный файл из массива [0] (Победа над алертом!)
+        // Берем самый первый файл из массива напрямую
         const file = this.files[0]; 
         if (!file || !window.supabase) return;
 
@@ -144,8 +144,9 @@ function setupUpload() {
             listenToCloudFeed(); 
             
         } catch (error) {
-            console.error("Ошибка загрузки:", error.message);
-            alert("Не удалось загрузить видео. Проверь бакет!");
+            console.error("Ошибка загрузки:", error);
+            // Изменено: теперь покажет РЕАЛЬНЫЙ системный текст ошибки, а не заглушку
+            alert("Системная ошибка: " + (error.message || JSON.stringify(error)));
         } finally {
             if (btnHome) btnHome.innerHTML = "<span class='nav-icon'>🏠</span><span>Главная</span>";
             if (btnHome) btnHome.click();

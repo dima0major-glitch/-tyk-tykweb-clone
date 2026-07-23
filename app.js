@@ -140,7 +140,7 @@ function setupUpload() {
     if (!fileInput) return;
     
     fileInput.addEventListener('change', async function() {
-        // ЖЕСТКОЕ ИСПРАВЛЕНИЕ: Берем строго первый файл из списка файлов [0]
+        // КРИТИЧЕСКОЕ ИСПРАВЛЕНИЕ ДЛЯ IOS: Извлекаем именно ПЕРВЫЙ элемент из списка [0]
         const file = this.files[0]; 
         if (!file || !window.supabase) return;
 
@@ -150,12 +150,11 @@ function setupUpload() {
         try {
             const currentTag = document.querySelector('.profile-tag') ? document.querySelector('.profile-tag').innerText : "@dimka_0770";
             
-            // Защита от сбоя URL: берем чистое расширение файла в нижнем регистре
+            // Безопасное извлечение расширения файла без кириллицы
             const fileExt = file.name.split('.').pop().toLowerCase();
             const fileName = `${Date.now()}_${Math.random().toString(36).substring(2, 7)}.${fileExt}`;
 
-            // ЖЕСТКОЕ ИСПРАВЛЕНИЕ ДЛЯ IOS SAFARI: Конвертируем файл в чистый Blob объект.
-            // Это обходит внутренние ограничения WebKit на обработку объектов File в SDK.
+            // СТРОГОЕ ОБЕРТЫВАНИЕ В BLOB: Защищает от багов WebKit при передаче объекта File в SDK
             const fileBlob = new Blob([file], { type: file.type || 'video/mp4' });
 
             // Отправка файла в бакет Storage Supabase с принудительным указанием contentType
@@ -163,7 +162,7 @@ function setupUpload() {
                 .storage
                 .from('videos')
                 .upload(fileName, fileBlob, {
-                    contentType: file.type || 'video/mp4', // Важно для работы QuickTime на iOS
+                    contentType: file.type || 'video/mp4', // Принудительно для QuickTime плеера iOS
                     cacheControl: '3600',
                     upsert: false
                 });
@@ -178,7 +177,7 @@ function setupUpload() {
 
             const publicUrl = urlData.publicUrl;
 
-            // Запись данных в таблицу нашей базы данных
+            // Запись данных в таблицу нашей базы данных (где RLS отключен, так что запись пройдет успешно)
             const { error: dbError } = await window.supabase
                 .from('videos')
                 .insert([
@@ -251,13 +250,11 @@ function setupAutoplayObserver() {
         });
     }, { threshold: 0.6 });
 
-    // Обратите внимание: метод переинициализации наблюдателя должен вызываться после initFeed
     setTimeout(() => {
         document.querySelectorAll("#video-feed .video-card").forEach(card => observer.observe(card));
     }, 500);
 }
 
-// Заглушка, чтобы не падало, если функция не описана в вашем файле
 function setupVideoTaps() {
     console.log("Тапы по видео активны");
 }

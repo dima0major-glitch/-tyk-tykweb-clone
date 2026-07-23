@@ -139,7 +139,8 @@ function setupUpload() {
     if (!fileInput) return;
     
     fileInput.addEventListener('change', async function() {
-        // ЖЕСТКОЕ ИСПРАВЛЕНИЕ ДЛЯ IOS: Извлекаем строго ПЕРВЫЙ файл [0] из коллекции!
+        // ЖЕЛЕЗОБЕТОННОЕ ИСПРАВЛЕНИЕ: Извлекаем строго ПЕРВЫЙ элемент коллекции через [0]
+        // Без этого на iOS свойство file.type возвращает undefined, вешая сеть в "Load failed"!
         const file = this.files[0]; 
         if (!file || !window.supabase || !window.SUPABASE_URL) return;
 
@@ -149,11 +150,10 @@ function setupUpload() {
         try {
             const currentTag = document.querySelector('.profile-tag') ? document.querySelector('.profile-tag').innerText : "@dimka_0770";
             
-            // ЖЕСТКОЕ ИСПРАВЛЕНИЕ: Не трогаем оригинальное file.name (оно вызывает ошибку на iOS Safari)
-            // Просто генерируем полностью случайное имя с расширением mp4
+            // Безопасное изолированное имя для Supabase Storage
             const fileName = `${Date.now()}_${Math.random().toString(36).substring(2, 7)}.mp4`;
 
-            // Упаковываем файл в чистый Blob, чтобы обойти песочницу WebKit
+            // Упаковываем реальный файл в чистый Blob
             const fileBlob = new Blob([file], { type: file.type || 'video/mp4' });
 
             const uploadUrl = `${window.SUPABASE_URL}/storage/v1/object/videos/${fileName}`;
@@ -175,10 +175,10 @@ function setupUpload() {
                 throw new Error(`Хранилище ответило ошибкой: ${errorText}`);
             }
 
-            // Публичная ссылка на видеофайл в бакете Supabase
+            // Формируем постоянный публичный URL
             const publicUrl = `${window.SUPABASE_URL}/storage/v1/object/public/videos/${fileName}`;
 
-            // Запись метаданных в таблицу базы данных (RLS отключен, проверка пропустит запрос)
+            // Пишем метаданные в таблицу 'videos' (где RLS теперь успешно отключен)
             const { error: dbError } = await window.supabase
                 .from('videos')
                 .insert([
@@ -256,7 +256,6 @@ function setupAutoplayObserver() {
     }, 500);
 }
 
-// Заглушка для тапов по видео
 function setupVideoTaps() {
     console.log("Тапы по видео активны");
 }

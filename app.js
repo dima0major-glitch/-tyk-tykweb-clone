@@ -139,8 +139,8 @@ function setupUpload() {
     if (!fileInput) return;
     
     fileInput.addEventListener('change', async function() {
-        // ЖЕЛЕЗОБЕТОННОЕ ИСПРАВЛЕНИЕ: Извлекаем строго ПЕРВЫЙ элемент коллекции через [0]
-        // Без этого на iOS свойство file.type возвращает undefined, вешая сеть в "Load failed"!
+        // ЖЕЛЕЗОБЕТОННОЕ ИСПРАВЛЕНИЕ: Извлекаем строго ПЕРВЫЙ файл [0] из коллекции
+        // Без индекса [0] объект file являлся массивом FileList, что вызывало краш сети "Load failed"!
         const file = this.files[0]; 
         if (!file || !window.supabase || !window.SUPABASE_URL) return;
 
@@ -150,22 +150,25 @@ function setupUpload() {
         try {
             const currentTag = document.querySelector('.profile-tag') ? document.querySelector('.profile-tag').innerText : "@dimka_0770";
             
-            // Безопасное изолированное имя для Supabase Storage
-            const fileName = `${Date.now()}_${Math.random().toString(36).substring(2, 7)}.mp4`;
+            // Изолируем генерацию имени файла от локального имени на iPhone
+            const fileExt = file.name ? file.name.split('.').pop().toLowerCase() : 'mp4';
+            const fileName = `${Date.now()}_${Math.random().toString(36).substring(2, 7)}.${fileExt}`;
 
-            // Упаковываем реальный файл в чистый Blob
+            // Конвертируем чистый файл в Blob, чтобы WebKit на iOS не ругался на песочницу диска
             const fileBlob = new Blob([file], { type: file.type || 'video/mp4' });
 
+            // ОФИЦИАЛЬНЫЙ URL REST API SUPABASE ДЛЯ POST ЗАПРОСОВ:
+            // Формат: [PROJECT_URL]/storage/v1/object/[ИМЯ_БАКЕТА]/[ИМЯ_ФАЙЛА]
             const uploadUrl = `${window.SUPABASE_URL}/storage/v1/object/videos/${fileName}`;
             
-            // Отправляем чистый бинарник через нативный fetch
+            // Выполняем нативный fetch напрямую в бакет
             const uploadResponse = await fetch(uploadUrl, {
                 method: 'POST',
                 mode: 'cors',
                 headers: {
                     'Authorization': `Bearer ${window.SUPABASE_ANON_KEY}`,
                     'apikey': window.SUPABASE_ANON_KEY,
-                    'Content-Type': file.type || 'video/mp4'
+                    'Content-Type': file.type || 'video/mp4' // Обязательно для QuickTime/Safari на iOS
                 },
                 body: fileBlob
             });
@@ -175,10 +178,10 @@ function setupUpload() {
                 throw new Error(`Хранилище ответило ошибкой: ${errorText}`);
             }
 
-            // Формируем постоянный публичный URL
+            // Формируем чистый ПУБЛИЧНЫЙ URL для чтения видеоплеером:
             const publicUrl = `${window.SUPABASE_URL}/storage/v1/object/public/videos/${fileName}`;
 
-            // Пишем метаданные в таблицу 'videos' (где RLS теперь успешно отключен)
+            // Запись метаданных в таблицу 'videos' (где RLS теперь успешно отключен)
             const { error: dbError } = await window.supabase
                 .from('videos')
                 .insert([

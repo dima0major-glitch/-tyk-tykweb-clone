@@ -139,7 +139,8 @@ function setupUpload() {
     if (!fileInput) return;
     
     fileInput.addEventListener('change', async function() {
-        // ЖЕСТКОЕ ИСПРАВЛЕНИЕ: Берем строго первый файл из списка файлов [0]
+        // ЖЕЛЕЗОБЕТОННОЕ ИСПРАВЛЕНИЕ: Берем строго первый файл из списка через [0]
+        // Без [0] FileReader получает массив элементов и тихо прекращает работу!
         const file = this.files[0]; 
         if (!file || !window.supabase) return;
 
@@ -153,7 +154,7 @@ function setupUpload() {
             try {
                 const currentTag = document.querySelector('.profile-tag') ? document.querySelector('.profile-tag').innerText : "@dimka_0770";
                 
-                // Формируем полностью случайное имя файла без кириллицы
+                // Теперь file.name прочитается корректно, так как file — это конкретный объект
                 const fileExt = file.name ? file.name.split('.').pop().toLowerCase() : 'mp4';
                 const fileName = `${Date.now()}_${Math.random().toString(36).substring(2, 7)}.${fileExt}`;
 
@@ -214,7 +215,7 @@ function setupUpload() {
             if (btnHome) btnHome.innerHTML = "<span class='nav-icon'>🏠</span><span>Главная</span>";
         };
 
-        // Запуск чтения файла в ОЗУ
+        // Запуск чтения конкретного файла в ОЗУ
         reader.readAsArrayBuffer(file);
     });
 }

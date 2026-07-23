@@ -148,12 +148,9 @@
             <span>Интересное</span>
         </div>
         
-        <!-- Кнопка Плюс (Загрузка) с прозрачным инпутом внутри -->
+        <!-- КНОПКА ПЛЮС: Избавлен от ломающих вложенных тегов, реагирует на клик через JS -->
         <div class="nav-item" id="plus-btn">
-            <div class="nav-create">
-                +
-                <input type="file" id="video-upload-input" accept="video/*">
-            </div>
+            <div class="nav-create">+</div>
         </div>
         
         <div class="nav-item" onclick="alert('Входящие пусты')">
@@ -166,10 +163,13 @@
         </div>
     </div>
 
-    <!-- ПОДКЛЮЧАЕМ Облачную Конфигурацию Supabase как Модуль (для работы CDN esm.sh) -->
+    <!-- НАСТОЯЩИЙ ИНПУТ: Лежит отдельно, полностью легален для iOS WebKit, скрыт от дизайна -->
+    <input type="file" id="video-upload-input" accept="video/*" style="display: none;">
+
+    <!-- ПОДКЛЮЧАЕМ Облачную Конфигурацию Supabase как Модуль (для импорта esm.sh CDN) -->
     <script type="module" src="./supabase-config.js"></script>
     
-    <!-- ПОДКЛЮЧАЕМ ОСТАЛЬНЫЕ СЦЕНАРИИ КАК ОБЫЧНЫЕ СКРИПТЫ ДЛЯ ИДЕАЛЬНОЙ РАБОТЫ В КОНТЕКСТЕ PWA IOS -->
+    <!-- ПОДКЛЮЧАЕМ ОСТАЛЬНЫЕ СЦЕНАРИИ КАК ОБЫЧНЫЕ СКРИПТЫ ДЛЯ СТАБИЛЬНОСТИ PWA И СЕТИ НА IOS -->
     <script src="./app.js"></script>
     <script src="./profile.js"></script>
     <script src="./likes.js"></script>

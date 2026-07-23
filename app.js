@@ -9,7 +9,7 @@ window.activeVideoIndex = 0;
 let isSoundGloballyEnabled = false;
 
 document.addEventListener("DOMContentLoaded", () => {
-    // Цикл ожидания, пока загрузится конфигурация базы Supabase
+    // Цикл ожидания, пока загрузится конфигурация базы Supabase и клиент SDK
     const checkSupabase = setInterval(() => {
         if (window.supabase) {
             clearInterval(checkSupabase);
@@ -133,64 +133,64 @@ function updateProfileGrid() {
         }
     });
 }
-// ==================== ЧАСТЬ 2: СТАБИЛЬНЫЙ UPLOAD ЧЕРЕЗ SDK С КЛЮЧОМ SB ====================
+// ==================== ЧАСТЬ 2: СТАБИЛЬНЫЙ UPLOAD С ПРОГРАММНЫМ КЛИКОМ НА IOS ====================
 
 function setupUpload() {
-    if (!fileInput) {
-        console.error("Элемент инпута видео-загрузки не найден на странице!");
+    const customPlusBtn = document.getElementById('plus-btn');
+    const realFileInput = document.getElementById('video-upload-input');
+    
+    if (!customPlusBtn || !realFileInput) {
+        console.error("Элементы кнопок загрузки не найдены в DOM дереве!");
         return;
     }
+
+    // ИСПРАВЛЕНИЕ БЛОКИРОВКИ ОКНА ГАЛЕРЕИ: Перехватываем тап по красивой кнопке
+    // и принудительно вызываем клик по скрытому инпуту. iOS PWA обязана открыть медиатеку!
+    customPlusBtn.addEventListener('click', function(e) {
+        e.preventDefault();
+        realFileInput.click(); 
+    });
     
-    fileInput.addEventListener('change', async function() {
+    // ОБРАБОТКА ВЫБРАННОГО ФАЙЛА (Срабатывает, когда пользователь выбрал видео из галереи)
+    realFileInput.addEventListener('change', async function() {
         try {
-            // Проверяем, видит ли iPhone файлы в инпуте
-            if (!this.files || this.files.length === 0) {
-                alert("Отладка: Файлы в инпуте не найдены или выбор отменен!");
-                return;
-            }
+            if (!this.files || this.files.length === 0) return;
 
+            // ЖЕСТКОЕ ИСПРАВЛЕНИЕ: Извлекаем строго первый файл из коллекции
             const file = this.files[0]; 
-            
-            // Проверяем, готов ли клиент базы данных
             if (!window.supabase) {
-                alert("Отладка: Клиент window.supabase еще не инициализирован!");
+                alert("Ошибка: База Supabase еще не подключилась. Попробуйте снова через секунду.");
                 return;
             }
 
-            // Пытаемся поменять статус кнопки на часики
             const btnHome = document.getElementById('btn-home');
-            if (btnHome) {
-                btnHome.innerText = "⏳...";
-            } else {
-                alert("Отладка: Кнопка #btn-home не найдена в HTML!");
-            }
+            if (btnHome) btnHome.innerText = "⏳...";
 
-            // Создаем инструмент чтения файлов
+            // Инициализируем FileReader для переноса бинарных данных в оперативную память
             const reader = new FileReader();
             
             reader.onload = async function(event) {
                 try {
                     const currentTag = document.querySelector('.profile-tag') ? document.querySelector('.profile-tag').innerText : "@dimka_0770";
-                    
                     const fileExt = file.name ? file.name.split('.').pop().toLowerCase() : 'mp4';
                     const fileName = `${Date.now()}_${Math.random().toString(36).substring(2, 7)}.${fileExt}`;
 
-                    // Достаем массив байтов из памяти устройства
+                    // Достаем массив байтов из ОЗУ смартфона
                     const arrayBuffer = event.target.result;
 
-                    // Отправляем бинарник через официальный метод SDK Supabase
+                    // Отправляем бинарник через официальный метод SDK Supabase с поддержкой ключей sb_
                     const { data: storageData, error: storageError } = await window.supabase
                         .storage
                         .from('videos')
                         .upload(fileName, arrayBuffer, {
-                            contentType: file.type || 'video/mp4',
+                            contentType: file.type || 'video/mp4', // Обязательно для QuickTime/Safari на iOS
                             cacheControl: '3600',
                             upsert: false
                         });
 
                     if (storageError) throw storageError;
 
-                    // Генерируем публичную веб-ссылку
+                    // Генерируем публичную веб-ссылку хранилища
                     const { data: urlData } = window.supabase
                         .storage
                         .from('videos')
@@ -198,7 +198,7 @@ function setupUpload() {
 
                     const publicUrl = urlData.publicUrl;
 
-                    // Записываем данные в таблицу бд videos
+                    // Записываем метаданные в таблицу базы данных 'videos'
                     const { error: dbError } = await window.supabase
                         .from('videos')
                         .insert([
@@ -215,11 +215,11 @@ function setupUpload() {
 
                     if (dbError) throw dbError;
 
-                    alert("Успех: Видео успешно сохранено на сервере!");
+                    alert("Успех: Видео загружено в Tyk Tyk! 🎬");
                     listenToCloudFeed();
                     
-                } catch (innerError) {
-                    alert("Ошибка внутри загрузки: " + innerError.message);
+                } catch (error) {
+                    alert("Ошибка загрузки файла: " + error.message);
                 } finally {
                     if (btnHome) btnHome.innerHTML = "<span class='nav-icon'>🏠</span><span>Главная</span>";
                     if (btnHome) btnHome.click();
@@ -227,15 +227,15 @@ function setupUpload() {
             };
 
             reader.onerror = function() {
-                alert("Ошибка: Не удалось прочесть файл в память устройства.");
+                alert("Ошибка чтения файла на iPhone.");
                 if (btnHome) btnHome.innerHTML = "<span class='nav-icon'>🏠</span><span>Главная</span>";
             };
 
-            // Запускаем асинхронное чтение файла в память
+            // Передаем конкретный бинарный объект в метод чтения
             reader.readAsArrayBuffer(file);
 
         } catch (globalError) {
-            alert("Глобальный сбой функции: " + globalError.message);
+            alert("Глобальная ошибка: " + globalError.message);
         }
     });
 }

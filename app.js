@@ -1,6 +1,5 @@
 // ==================== ЧАСТЬ 1: ИНИЦИАЛИЗАЦИЯ И ИНТЕРФЕЙС ====================
 
-// Финальный автономный модуль ленты Supabase со строгим чтением файлов iOS
 const fileInput = document.getElementById('video-upload-input');
 const profileGrid = document.getElementById('profile-grid');
 const feedContainer = document.getElementById('video-feed');
@@ -10,9 +9,9 @@ window.activeVideoIndex = 0;
 let isSoundGloballyEnabled = false;
 
 document.addEventListener("DOMContentLoaded", () => {
-    // Цикл ожидания, пока загрузится конфигурация базы Supabase
+    // Ждем, пока загрузится конфигурация Supabase и глобальные переменные URL
     const checkSupabase = setInterval(() => {
-        if (window.supabase) {
+        if (window.supabase && window.SUPABASE_URL) {
             clearInterval(checkSupabase);
             listenToCloudFeed(); 
         }
@@ -140,54 +139,46 @@ function setupUpload() {
     if (!fileInput) return;
     
     fileInput.addEventListener('change', async function() {
-        // Жестко берем строго первый выбранный файл из списка
         const file = this.files[0]; 
-        if (!file || !window.supabase) return;
+        if (!file || !window.supabase || !window.SUPABASE_URL) return;
 
         const btnHome = document.getElementById('btn-home');
         if (btnHome) btnHome.innerText = "⏳...";
 
-        // Инициализируем нативный FileReader для чтения данных в оперативную память
         const reader = new FileReader();
         
-        // Обработчик события успешного считывания файла устройством
         reader.onload = async function(event) {
             try {
                 const currentTag = document.querySelector('.profile-tag') ? document.querySelector('.profile-tag').innerText : "@dimka_0770";
                 
-                // Очищаем имя файла от пробелов, кириллицы и спецсимволов для стабильности путей URL
                 const fileExt = file.name.split('.').pop().toLowerCase();
                 const fileName = `${Date.now()}_${Math.random().toString(36).substring(2, 7)}.${fileExt}`;
 
-                // Получаем сырой ArrayBuffer
                 const arrayBuffer = event.target.result;
-                
-                // РЕШЕНИЕ ДЛЯ IOS (SAFARI & CHROME): Переводим буфер в массив целых чисел Uint8Array.
-                // Это полностью разрывает связь с диском iPhone. Браузер видит данные как простую
-                // переменную в памяти и не блокирует сетевой запрос ошибкой "Load failed".
                 const fileDataToUpload = new Uint8Array(arrayBuffer);
 
-                // Отправляем чистый массив байтов в облачное хранилище Storage Supabase
-                const { data: storageData, error: storageError } = await window.supabase
-                    .storage
-                    .from('videos')
-                    .upload(fileName, fileDataToUpload, {
-                        contentType: file.type || 'video/mp4', // Принудительно задаем тип для QuickTime на iOS
-                        cacheControl: '3600',
-                        upsert: false
-                    });
+                // НАПРАВЛЯЕМ ЗАПРОС К API НАПРЯМУЮ: Минуем внутренние баги SDK с заголовками
+                const uploadUrl = `${window.SUPABASE_URL}/storage/v1/object/videos/${fileName}`;
+                
+                const uploadResponse = await fetch(uploadUrl, {
+                    method: 'POST',
+                    headers: {
+                        'Authorization': `Bearer ${window.SUPABASE_ANON_KEY}`,
+                        'apikey': window.SUPABASE_ANON_KEY,
+                        'Content-Type': file.type || 'video/mp4'
+                    },
+                    body: fileDataToUpload
+                });
 
-                if (storageError) throw storageError;
+                if (!uploadResponse.ok) {
+                    const errorText = await uploadResponse.text();
+                    throw new Error(`Хранилище ответило ошибкой: ${errorText}`);
+                }
 
-                // Получение постоянной публичной ссылки на объект
-                const { data: urlData } = window.supabase
-                    .storage
-                    .from('videos')
-                    .getPublicUrl(fileName);
+                // Формируем чистый публичный URL
+                const publicUrl = `${window.SUPABASE_URL}/storage/v1/object/public/videos/${fileName}`;
 
-                const publicUrl = urlData.publicUrl;
-
-                // Сохраняем метаданные в таблицу Базы Данных (так как RLS отключен, запрос пройдет без проблем)
+                // Пишем метаданные в таблицу 'videos' (где RLS успешно отключен)
                 const { error: dbError } = await window.supabase
                     .from('videos')
                     .insert([
@@ -208,7 +199,7 @@ function setupUpload() {
                 listenToCloudFeed(); 
                 
             } catch (error) {
-                console.error("Критическая ошибка WebKit на iOS при отправке:", error);
+                console.error("Ошибка при обработке WebKit iOS:", error);
                 alert("Системная ошибка: " + (error.message || JSON.stringify(error)));
             } finally {
                 if (btnHome) btnHome.innerHTML = "<span class='nav-icon'>🏠</span><span>Главная</span>";
@@ -217,12 +208,10 @@ function setupUpload() {
         };
 
         reader.onerror = function() {
-            console.error("Ошибка чтения медиафайла в ОЗУ смартфона");
-            alert("Не удалось считать файл с вашего устройства.");
+            alert("Ошибка считывания файла с iPhone.");
             if (btnHome) btnHome.innerHTML = "<span class='nav-icon'>🏠</span><span>Главная</span>";
         };
 
-        // Запускаем чтение выбранного видеофайла как двоичный буфер памяти
         reader.readAsArrayBuffer(file);
     });
 }
@@ -268,7 +257,7 @@ function setupAutoplayObserver() {
                 if (video) video.pause();
             }
         });
-    }, { threshold: 0.6 });
+    }, { threshold: 0.7 });
 
     setTimeout(() => {
         document.querySelectorAll("#video-feed .video-card").forEach(card => observer.observe(card));

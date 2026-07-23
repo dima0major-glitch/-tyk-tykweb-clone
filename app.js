@@ -139,7 +139,7 @@ function setupUpload() {
     if (!fileInput) return;
     
     fileInput.addEventListener('change', async function() {
-        // Берем строго первый файл
+        // ЖЕСТКОЕ ИСПРАВЛЕНИЕ ДЛЯ IOS: Извлекаем строго ПЕРВЫЙ файл [0] из коллекции!
         const file = this.files[0]; 
         if (!file || !window.supabase || !window.SUPABASE_URL) return;
 
@@ -149,11 +149,11 @@ function setupUpload() {
         try {
             const currentTag = document.querySelector('.profile-tag') ? document.querySelector('.profile-tag').innerText : "@dimka_0770";
             
-            // Чистим имя файла от пробелов и кириллицы
-            const fileExt = file.name.split('.').pop().toLowerCase();
-            const fileName = `${Date.now()}_${Math.random().toString(36).substring(2, 7)}.${fileExt}`;
+            // ЖЕСТКОЕ ИСПРАВЛЕНИЕ: Не трогаем оригинальное file.name (оно вызывает ошибку на iOS Safari)
+            // Просто генерируем полностью случайное имя с расширением mp4
+            const fileName = `${Date.now()}_${Math.random().toString(36).substring(2, 7)}.mp4`;
 
-            // Переводим файл в Blob, чтобы WebKit на iOS не ругался на доступ к диску
+            // Упаковываем файл в чистый Blob, чтобы обойти песочницу WebKit
             const fileBlob = new Blob([file], { type: file.type || 'video/mp4' });
 
             const uploadUrl = `${window.SUPABASE_URL}/storage/v1/object/videos/${fileName}`;
@@ -165,7 +165,7 @@ function setupUpload() {
                 headers: {
                     'Authorization': `Bearer ${window.SUPABASE_ANON_KEY}`,
                     'apikey': window.SUPABASE_ANON_KEY,
-                    'Content-Type': file.type || 'video/mp4' // Строго задаем тип для QuickTime iOS
+                    'Content-Type': file.type || 'video/mp4'
                 },
                 body: fileBlob
             });
@@ -175,10 +175,10 @@ function setupUpload() {
                 throw new Error(`Хранилище ответило ошибкой: ${errorText}`);
             }
 
-            // Публичная ссылка на видеофайл
+            // Публичная ссылка на видеофайл в бакете Supabase
             const publicUrl = `${window.SUPABASE_URL}/storage/v1/object/public/videos/${fileName}`;
 
-            // Запись метаданных в таблицу базы данных
+            // Запись метаданных в таблицу базы данных (RLS отключен, проверка пропустит запрос)
             const { error: dbError } = await window.supabase
                 .from('videos')
                 .insert([
@@ -256,6 +256,7 @@ function setupAutoplayObserver() {
     }, 500);
 }
 
+// Заглушка для тапов по видео
 function setupVideoTaps() {
     console.log("Тапы по видео активны");
 }

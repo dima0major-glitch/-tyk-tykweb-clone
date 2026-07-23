@@ -139,8 +139,8 @@ function setupUpload() {
     if (!fileInput) return;
     
     fileInput.addEventListener('change', async function() {
-        // ЖЕЛЕЗОБЕТОННОЕ ИСПРАВЛЕНИЕ: Берем строго первый файл из списка через [0]
-        // Без [0] FileReader получает массив элементов и тихо прекращает работу!
+        // ЖЕЛЕЗОБЕТОННОЕ ИСПРАВЛЕНИЕ: Добавлен индекс [0], чтобы взять конкретный файл!
+        // Теперь iPhone точно запустит FileReader и не будет молча зависать.
         const file = this.files[0]; 
         if (!file || !window.supabase) return;
 
@@ -154,7 +154,6 @@ function setupUpload() {
             try {
                 const currentTag = document.querySelector('.profile-tag') ? document.querySelector('.profile-tag').innerText : "@dimka_0770";
                 
-                // Теперь file.name прочитается корректно, так как file — это конкретный объект
                 const fileExt = file.name ? file.name.split('.').pop().toLowerCase() : 'mp4';
                 const fileName = `${Date.now()}_${Math.random().toString(36).substring(2, 7)}.${fileExt}`;
 

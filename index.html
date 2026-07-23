@@ -6,6 +6,28 @@
     <title>Tyk Tyk</title>
     <!-- Подключаем стили -->
     <link rel="stylesheet" href="./style.css">
+
+    <!-- Подключение манифеста PWA -->
+    <link rel="manifest" href="./manifest.json">
+
+    <!-- Настройки PWA специально для iOS Apple -->
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <meta name="apple-mobile-web-app-title" content="Tyk Tyk">
+    
+    <!-- Иконка приложения для рабочего стола iPhone -->
+    <link rel="apple-touch-icon" href="https://flaticon.com">
+
+    <!-- Скрипт автоматической регистрации фонового движка Service Worker -->
+    <script>
+        if ('serviceWorker' in navigator) {
+            window.addEventListener('load', () => {
+                navigator.serviceWorker.register('./service-worker.js')
+                    .then(reg => console.log('Фоновый движок PWA успешно запущен! ✅', reg))
+                    .catch(err => console.error('Ошибка запуска движка PWA: ❌', err));
+            });
+        }
+    </script>
 </head>
 <body>
 
@@ -144,14 +166,14 @@
         </div>
     </div>
 
-    <!-- ПОДКЛЮЧАЕМ Облачную Конфигурацию Supabase как Модуль -->
+    <!-- ПОДКЛЮЧАЕМ Облачную Конфигурацию Supabase как Модуль (для работы CDN esm.sh) -->
     <script type="module" src="./supabase-config.js"></script>
     
-    <!-- ПОДКЛЮЧАЕМ ОСТАЛЬНЫЕ СЦЕНАРИИ КАК МОДУЛИ -->
-    <script type="module" src="./app.js"></script>
-    <script type="module" src="./profile.js"></script>
-    <script type="module" src="./likes.js"></script>
-    <!-- <script type="module" src="./likes.js"></script> -->
-    <!-- <script type="module" src="./comments.js"></script> -->  
+    <!-- ПОДКЛЮЧАЕМ ОСТАЛЬНЫЕ СЦЕНАРИИ КАК ОБЫЧНЫЕ СКРИПТЫ ДЛЯ ИДЕАЛЬНОЙ РАБОТЫ В КОНТЕКСТЕ PWA IOS -->
+    <script src="./app.js"></script>
+    <script src="./profile.js"></script>
+    <script src="./likes.js"></script>
+    <!-- <script src="./likes.js"></script> -->
+    <!-- <script src="./comments.js"></script> -->  
 </body>
 </html>

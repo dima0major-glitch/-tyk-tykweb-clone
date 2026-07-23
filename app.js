@@ -139,80 +139,72 @@ function setupUpload() {
     if (!fileInput) return;
     
     fileInput.addEventListener('change', async function() {
+        // Берем строго первый файл
         const file = this.files[0]; 
         if (!file || !window.supabase || !window.SUPABASE_URL) return;
 
         const btnHome = document.getElementById('btn-home');
         if (btnHome) btnHome.innerText = "⏳...";
 
-        const reader = new FileReader();
-        
-        reader.onload = async function(event) {
-            try {
-                const currentTag = document.querySelector('.profile-tag') ? document.querySelector('.profile-tag').innerText : "@dimka_0770";
-                
-                const fileExt = file.name.split('.').pop().toLowerCase();
-                const fileName = `${Date.now()}_${Math.random().toString(36).substring(2, 7)}.${fileExt}`;
+        try {
+            const currentTag = document.querySelector('.profile-tag') ? document.querySelector('.profile-tag').innerText : "@dimka_0770";
+            
+            // Чистим имя файла от пробелов и кириллицы
+            const fileExt = file.name.split('.').pop().toLowerCase();
+            const fileName = `${Date.now()}_${Math.random().toString(36).substring(2, 7)}.${fileExt}`;
 
-                const arrayBuffer = event.target.result;
-                const fileDataToUpload = new Uint8Array(arrayBuffer);
+            // Переводим файл в Blob, чтобы WebKit на iOS не ругался на доступ к диску
+            const fileBlob = new Blob([file], { type: file.type || 'video/mp4' });
 
-                // НАПРАВЛЯЕМ ЗАПРОС К API НАПРЯМУЮ: Минуем внутренние баги SDK с заголовками
-                const uploadUrl = `${window.SUPABASE_URL}/storage/v1/object/videos/${fileName}`;
-                
-                const uploadResponse = await fetch(uploadUrl, {
-                    method: 'POST',
-                    headers: {
-                        'Authorization': `Bearer ${window.SUPABASE_ANON_KEY}`,
-                        'apikey': window.SUPABASE_ANON_KEY,
-                        'Content-Type': file.type || 'video/mp4'
-                    },
-                    body: fileDataToUpload
-                });
+            const uploadUrl = `${window.SUPABASE_URL}/storage/v1/object/videos/${fileName}`;
+            
+            // Отправляем чистый бинарник через нативный fetch
+            const uploadResponse = await fetch(uploadUrl, {
+                method: 'POST',
+                mode: 'cors',
+                headers: {
+                    'Authorization': `Bearer ${window.SUPABASE_ANON_KEY}`,
+                    'apikey': window.SUPABASE_ANON_KEY,
+                    'Content-Type': file.type || 'video/mp4' // Строго задаем тип для QuickTime iOS
+                },
+                body: fileBlob
+            });
 
-                if (!uploadResponse.ok) {
-                    const errorText = await uploadResponse.text();
-                    throw new Error(`Хранилище ответило ошибкой: ${errorText}`);
-                }
-
-                // Формируем чистый публичный URL
-                const publicUrl = `${window.SUPABASE_URL}/storage/v1/object/public/videos/${fileName}`;
-
-                // Пишем метаданные в таблицу 'videos' (где RLS успешно отключен)
-                const { error: dbError } = await window.supabase
-                    .from('videos')
-                    .insert([
-                        {
-                            url: publicUrl,
-                            author: currentTag,
-                            description: `Новый хит в облачной ленте! 🔥`,
-                            likes: 0,
-                            isLiked: false,
-                            comments: [],
-                            createdAt: new Date().toISOString()
-                        }
-                    ]);
-
-                if (dbError) throw dbError;
-
-                console.log("Видео успешно сохранено на сервере!");
-                listenToCloudFeed(); 
-                
-            } catch (error) {
-                console.error("Ошибка при обработке WebKit iOS:", error);
-                alert("Системная ошибка: " + (error.message || JSON.stringify(error)));
-            } finally {
-                if (btnHome) btnHome.innerHTML = "<span class='nav-icon'>🏠</span><span>Главная</span>";
-                if (btnHome) btnHome.click();
+            if (!uploadResponse.ok) {
+                const errorText = await uploadResponse.text();
+                throw new Error(`Хранилище ответило ошибкой: ${errorText}`);
             }
-        };
 
-        reader.onerror = function() {
-            alert("Ошибка считывания файла с iPhone.");
+            // Публичная ссылка на видеофайл
+            const publicUrl = `${window.SUPABASE_URL}/storage/v1/object/public/videos/${fileName}`;
+
+            // Запись метаданных в таблицу базы данных
+            const { error: dbError } = await window.supabase
+                .from('videos')
+                .insert([
+                    {
+                        url: publicUrl,
+                        author: currentTag,
+                        description: `Новый хит в облачной ленте! 🔥`,
+                        likes: 0,
+                        isLiked: false,
+                        comments: [],
+                        createdAt: new Date().toISOString()
+                    }
+                ]);
+
+            if (dbError) throw dbError;
+
+            console.log("Видео успешно сохранено на сервере!");
+            listenToCloudFeed(); 
+            
+        } catch (error) {
+            console.error("Ошибка при обработке WebKit iOS:", error);
+            alert("Системная ошибка: " + (error.message || JSON.stringify(error)));
+        } finally {
             if (btnHome) btnHome.innerHTML = "<span class='nav-icon'>🏠</span><span>Главная</span>";
-        };
-
-        reader.readAsArrayBuffer(file);
+            if (btnHome) btnHome.click();
+        }
     });
 }
 

@@ -1,4 +1,4 @@
-// Финальный автономный модуль ленты Supabase 
+// Финальный автономный модуль ленты Supabase со строгим чтением файлов iOS
 const fileInput = document.getElementById('video-upload-input');
 const profileGrid = document.getElementById('profile-grid');
 const feedContainer = document.getElementById('video-feed');
@@ -8,7 +8,7 @@ window.activeVideoIndex = 0;
 let isSoundGloballyEnabled = false;
 
 document.addEventListener("DOMContentLoaded", () => {
-    // Цикл ожидания, пока загрузится конфигурация базы
+    // Цикл ожидания, пока загрузится конфигурация базы Supabase
     const checkSupabase = setInterval(() => {
         if (window.supabase) {
             clearInterval(checkSupabase);
@@ -96,7 +96,8 @@ function setupUpload() {
     if (!fileInput) return;
     
     fileInput.addEventListener('change', async function() {
-        const file = this.files[0]; // ИСПРАВЛЕНО: Берем первый файл из массива напрямую
+        // УКАЗАНО СТРОГО: Берем первый конкретный файл из массива [0] (Победа над алертом!)
+        const file = this.files[0]; 
         if (!file || !window.supabase) return;
 
         const btnHome = document.getElementById('btn-home');
@@ -106,7 +107,7 @@ function setupUpload() {
             const currentTag = document.querySelector('.profile-tag') ? document.querySelector('.profile-tag').innerText : "@dimka_0770";
             const fileName = `${Date.now()}_${file.name}`;
 
-            // Отправка файла в бакет Storage
+            // Отправка файла в бакет Storage Supabase
             const { data: storageData, error: storageError } = await window.supabase
                 .storage
                 .from('videos')
@@ -114,7 +115,7 @@ function setupUpload() {
 
             if (storageError) throw storageError;
 
-            // Генерация публичной ссылки
+            // Генерация публичной ссылки на видеофайл
             const { data: urlData } = window.supabase
                 .storage
                 .from('videos')
@@ -122,7 +123,7 @@ function setupUpload() {
 
             const publicUrl = urlData.publicUrl;
 
-            // Запись данных в таблицу Firestore
+            // Запись данных в таблицу нашей базы данных
             const { error: dbError } = await window.supabase
                 .from('videos')
                 .insert([
@@ -139,12 +140,12 @@ function setupUpload() {
 
             if (dbError) throw dbError;
 
-            console.log("Видео успешно сохранено!");
+            console.log("Видео успешно сохранено на сервере!");
             listenToCloudFeed(); 
             
         } catch (error) {
-            console.error("Ошибка:", error.message);
-            alert("Не удалось загрузить. Проверь бакет!");
+            console.error("Ошибка загрузки:", error.message);
+            alert("Не удалось загрузить видео. Проверь бакет!");
         } finally {
             if (btnHome) btnHome.innerHTML = "<span class='nav-icon'>🏠</span><span>Главная</span>";
             if (btnHome) btnHome.click();

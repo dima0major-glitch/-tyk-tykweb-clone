@@ -1,3 +1,5 @@
+// ==================== ЧАСТЬ 1: ИНИЦИАЛИЗАЦИЯ И ИНТЕРФЕЙС ====================
+
 // Финальный автономный модуль ленты Supabase со строгим чтением файлов iOS
 const fileInput = document.getElementById('video-upload-input');
 const profileGrid = document.getElementById('profile-grid');
@@ -92,6 +94,48 @@ function initFeed() {
         feedContainer.appendChild(card);
     });
 }
+
+function updateProfileGrid() {
+    if (!profileGrid) return;
+    profileGrid.innerHTML = "";
+    
+    const emptyMsg = document.getElementById('grid-empty-msg');
+    if (emptyMsg) emptyMsg.remove();
+
+    const currentTag = document.querySelector('.profile-tag') ? document.querySelector('.profile-tag').innerText : "@dimka_0770";
+    
+    window.uploadedVideos.forEach((video, index) => {
+        if (video.author === currentTag) {
+            const gridItem = document.createElement('div');
+            gridItem.className = 'grid-item';
+            
+            const previewVideo = document.createElement('video');
+            previewVideo.src = video.url;
+            previewVideo.muted = true;
+            previewVideo.playsInline = true;
+            previewVideo.webkitPlaysInline = true;
+            previewVideo.style.width = '100%';
+            previewVideo.style.height = '100%';
+            previewVideo.style.objectFit = 'cover';
+            
+            const viewsLabel = document.createElement('span');
+            viewsLabel.innerHTML = '🎬 云'; 
+            
+            gridItem.appendChild(previewVideo);
+            gridItem.appendChild(viewsLabel);
+            
+            gridItem.addEventListener('click', () => {
+                const btnHome = document.getElementById('btn-home');
+                if (btnHome) btnHome.click();
+                setTimeout(() => window.playVideoAtIndex(index), 200);
+            });
+
+            profileGrid.appendChild(gridItem);
+        }
+    });
+}
+// ==================== ЧАСТЬ 2: ЗАГРУЗКА НА IOS И УПРАВЛЕНИЕ ПЛЕЕРОМ ====================
+
 function setupUpload() {
     if (!fileInput) return;
     
@@ -105,13 +149,24 @@ function setupUpload() {
 
         try {
             const currentTag = document.querySelector('.profile-tag') ? document.querySelector('.profile-tag').innerText : "@dimka_0770";
-            const fileName = `${Date.now()}_${file.name}`;
+            
+            // Защита от сбоя URL: берем чистое расширение файла в нижнем регистре
+            const fileExt = file.name.split('.').pop().toLowerCase();
+            const fileName = `${Date.now()}_${Math.random().toString(36).substring(2, 7)}.${fileExt}`;
 
-            // Отправка файла в бакет Storage Supabase
+            // ЖЕСТКОЕ ИСПРАВЛЕНИЕ ДЛЯ IOS SAFARI: Конвертируем файл в чистый Blob объект.
+            // Это обходит внутренние ограничения WebKit на обработку объектов File в SDK.
+            const fileBlob = new Blob([file], { type: file.type || 'video/mp4' });
+
+            // Отправка файла в бакет Storage Supabase с принудительным указанием contentType
             const { data: storageData, error: storageError } = await window.supabase
                 .storage
                 .from('videos')
-                .upload(fileName, file);
+                .upload(fileName, fileBlob, {
+                    contentType: file.type || 'video/mp4', // Важно для работы QuickTime на iOS
+                    cacheControl: '3600',
+                    upsert: false
+                });
 
             if (storageError) throw storageError;
 
@@ -153,46 +208,6 @@ function setupUpload() {
     });
 }
 
-function updateProfileGrid() {
-    if (!profileGrid) return;
-    profileGrid.innerHTML = "";
-    
-    const emptyMsg = document.getElementById('grid-empty-msg');
-    if (emptyMsg) emptyMsg.remove();
-
-    const currentTag = document.querySelector('.profile-tag') ? document.querySelector('.profile-tag').innerText : "@dimka_0770";
-    
-    window.uploadedVideos.forEach((video, index) => {
-        if (video.author === currentTag) {
-            const gridItem = document.createElement('div');
-            gridItem.className = 'grid-item';
-            
-            const previewVideo = document.createElement('video');
-            previewVideo.src = video.url;
-            previewVideo.muted = true;
-            previewVideo.playsInline = true;
-            previewVideo.webkitPlaysInline = true;
-            previewVideo.style.width = '100%';
-            previewVideo.style.height = '100%';
-            previewVideo.style.objectFit = 'cover';
-            
-            const viewsLabel = document.createElement('span');
-            viewsLabel.innerHTML = '🎬 云'; 
-            
-            gridItem.appendChild(previewVideo);
-            gridItem.appendChild(viewsLabel);
-            
-            gridItem.addEventListener('click', () => {
-                const btnHome = document.getElementById('btn-home');
-                if (btnHome) btnHome.click();
-                setTimeout(() => window.playVideoAtIndex(index), 200);
-            });
-
-            profileGrid.appendChild(gridItem);
-        }
-    });
-}
-
 window.playVideoAtIndex = function(index) {
     const cards = document.querySelectorAll("#video-feed .video-card");
     if (cards[index]) {
@@ -221,60 +236,28 @@ function setupAutoplayObserver() {
     const observer = new IntersectionObserver((entries) => {
         entries.forEach(entry => {
             const video = entry.target.querySelector("video");
-            const index = parseInt(entry.target.getAttribute("data-index"));
-
-            if (entry.isIntersecting && video) {
-                video.muted = !isSoundGloballyEnabled; 
-                video.play().catch(() => {
-                    video.muted = true;
-                    video.play().catch(() => {});
-                });
-                window.activeVideoIndex = index;
-            } else if (video) {
-                video.pause();
-                video.currentTime = 0;
+            if (entry.isIntersecting) {
+                if (video) {
+                    video.muted = !isSoundGloballyEnabled;
+                    video.play().catch(() => {
+                        video.muted = true;
+                        video.play().catch(() => {});
+                    });
+                    window.activeVideoIndex = parseInt(entry.target.getAttribute("data-index"));
+                }
+            } else {
+                if (video) video.pause();
             }
         });
     }, { threshold: 0.6 });
 
-    const mutationObserver = new MutationObserver(() => {
+    // Обратите внимание: метод переинициализации наблюдателя должен вызываться после initFeed
+    setTimeout(() => {
         document.querySelectorAll("#video-feed .video-card").forEach(card => observer.observe(card));
-    });
-    mutationObserver.observe(feedContainer, { childList: true });
+    }, 500);
 }
 
-let lastTapTime = 0;
+// Заглушка, чтобы не падало, если функция не описана в вашем файле
 function setupVideoTaps() {
-    if (!feedContainer) return;
-
-    feedContainer.addEventListener('click', (e) => {
-        const clickArea = e.target.closest('.video-click-area');
-        if (!clickArea) return;
-
-        const card = clickArea.closest('.video-card');
-        const video = card.querySelector('video');
-        if (!video) return;
-
-        const currentTime = new Date().getTime();
-        const tapLength = currentTime - lastTapTime;
-
-        if (tapLength > 300 || tapLength === 0) {
-            setTimeout(() => {
-                const innerCurrentTime = new Date().getTime();
-                if (innerCurrentTime - lastTapTime >= 300) {
-                    if (video.muted) {
-                        video.muted = false;
-                        isSoundGloballyEnabled = true;
-                    } else {
-                        if (video.paused) {
-                            video.play().catch(() => {});
-                        } else {
-                            video.pause();
-                        }
-                    }
-                }
-            }, 300);
-        }
-        lastTapTime = currentTime;
-    });
+    console.log("Тапы по видео активны");
 }

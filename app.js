@@ -13,11 +13,14 @@ document.addEventListener("DOMContentLoaded", () => {
     const checkSupabase = setInterval(() => {
         if (window.supabase) {
             clearInterval(checkSupabase);
+            
+            // ИСПРАВЛЕНИЕ: Запускаем настройку загрузки ТОЛЬКО после подключения базы
             listenToCloudFeed(); 
+            setupUpload();
         }
     }, 100);
 
-    setupUpload();
+    // Эти функции не зависят от базы, их можно запускать сразу
     setupAutoplayObserver();
     setupVideoTaps();
 });
@@ -144,21 +147,21 @@ function setupUpload() {
         return;
     }
 
-    // ИСПРАВЛЕНИЕ БЛОКИРОВКИ ОКНА ГАЛЕРЕИ: Перехватываем тап по красивой кнопке
-    // и принудительно вызываем клик по скрытому инпуту. iOS PWA обязана открыть медиатеку!
     customPlusBtn.addEventListener('click', function(e) {
         e.preventDefault();
         realFileInput.click(); 
     });
     
-    // ОБРАБОТКА ВЫБРАННОГО ФАЙЛА (Срабатывает, когда пользователь выбрал видео из галереи)
     realFileInput.addEventListener('change', async function() {
         try {
             if (!this.files || this.files.length === 0) return;
 
-            // ЖЕСТКОЕ ИСПРАВЛЕНИЕ: Извлекаем строго первый файл из коллекции
+            // ИСПРАВЛЕНИЕ: Берем строго первый файл из коллекции
             const file = this.files[0]; 
-            if (!window.supabase) {
+            
+            // ИСПРАВЛЕНИЕ: Берем актуальную локальную копию клиента базы
+            const supabaseClient = window.supabase;
+            if (!supabaseClient) {
                 alert("Ошибка: База Supabase еще не подключилась. Попробуйте снова через секунду.");
                 return;
             }
@@ -166,7 +169,6 @@ function setupUpload() {
             const btnHome = document.getElementById('btn-home');
             if (btnHome) btnHome.innerText = "⏳...";
 
-            // Инициализируем FileReader для переноса бинарных данных в оперативную память
             const reader = new FileReader();
             
             reader.onload = async function(event) {
@@ -175,31 +177,30 @@ function setupUpload() {
                     const fileExt = file.name ? file.name.split('.').pop().toLowerCase() : 'mp4';
                     const fileName = `${Date.now()}_${Math.random().toString(36).substring(2, 7)}.${fileExt}`;
 
-                    // Достаем массив байтов из ОЗУ смартфона
                     const arrayBuffer = event.target.result;
 
-                    // Отправляем бинарник через официальный метод SDK Supabase с поддержкой ключей sb_
-                    const { data: storageData, error: storageError } = await window.supabase
+                    // Загрузка бинарного файла в бакет Storage
+                    const { data: storageData, error: storageError } = await supabaseClient
                         .storage
                         .from('videos')
                         .upload(fileName, arrayBuffer, {
-                            contentType: file.type || 'video/mp4', // Обязательно для QuickTime/Safari на iOS
+                            contentType: file.type || 'video/mp4',
                             cacheControl: '3600',
                             upsert: false
                         });
 
                     if (storageError) throw storageError;
 
-                    // Генерируем публичную веб-ссылку хранилища
-                    const { data: urlData } = window.supabase
+                    // Получение публичной ссылки
+                    const { data: urlData } = supabaseClient
                         .storage
                         .from('videos')
                         .getPublicUrl(fileName);
 
                     const publicUrl = urlData.publicUrl;
 
-                    // Записываем метаданные в таблицу базы данных 'videos'
-                    const { error: dbError } = await window.supabase
+                    // Запись строки метаданных в таблицу базы данных
+                    const { error: dbError } = await supabaseClient
                         .from('videos')
                         .insert([
                             {
@@ -231,7 +232,6 @@ function setupUpload() {
                 if (btnHome) btnHome.innerHTML = "<span class='nav-icon'>🏠</span><span>Главная</span>";
             };
 
-            // Передаем конкретный бинарный объект в метод чтения
             reader.readAsArrayBuffer(file);
 
         } catch (globalError) {
@@ -262,6 +262,7 @@ window.playVideoAtIndex = function(index) {
     }
 }
 
+// Настройка автоматического воспроизведения видео при скролле ленты
 function setupAutoplayObserver() {
     if (!feedContainer) return;
 

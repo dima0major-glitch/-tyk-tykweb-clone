@@ -2,178 +2,84 @@
 <html lang="ru">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Tyk Tyk</title>
-    <!-- Подключаем стили -->
-    <link rel="stylesheet" href="./style.css">
-
-    <!-- Подключение манифеста PWA -->
-    <link rel="manifest" href="./manifest.json">
-
-    <!-- Настройки PWA специально для iOS Apple -->
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+    <title>Tyk Tyk Web Clone</title>
+    <link rel="stylesheet" href="style.css">
+    <link rel="manifest" href="manifest.json">
     <meta name="apple-mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
-    <meta name="apple-mobile-web-app-title" content="Tyk Tyk">
-    
-    <!-- Иконка приложения для рабочего стола iPhone -->
-    <link rel="apple-touch-icon" href="https://flaticon.com">
-
-    <!-- Скрипт автоматической регистрации фонового движка Service Worker -->
-    <script>
-        if ('serviceWorker' in navigator) {
-            window.addEventListener('load', () => {
-                navigator.serviceWorker.register('./service-worker.js')
-                    .then(reg => console.log('Фоновый движок PWA успешно запущен! ✅', reg))
-                    .catch(err => console.error('Ошибка запуска движка PWA: ❌', err));
-            });
-        }
-    </script>
 </head>
 <body>
 
-    <!-- ================= ЭКРАН 1: ЛЕНТА ВИДЕО ================= -->
-    <div id="screen-feed" class="tiktok-container">
-        <!-- Твой родной контейнер теперь превращен в бесконечную ленту со скроллом -->
-        <div id="video-feed" style="width: 100%; height: 100%; overflow-y: scroll; scroll-snap-type: y mandatory; -webkit-overflow-scrolling: touch;">
-            <!-- Сюда JavaScript будет динамически загружать карточки видео из Supabase -->
-        </div>
-    </div>
-
-    <!-- ================= ЭКРАН 2: ПРОФИЛЬ ПОЛЬЗОВАТЕЛЯ ================= -->
-    <div id="screen-profile" class="profile-container hidden">
-        <div class="profile-header">
-            <div class="profile-avatar">😎</div>
-            <div class="profile-username">Dima Major</div>
-            <div class="profile-tag">@dima0major</div>
-            
-            <div class="profile-stats">
-                <div class="stat-item">
-                    <span class="stat-count">142</span>
-                    <span class="stat-label">Подписки</span>
-                </div>
-                <div class="stat-item">
-                    <span class="stat-count">1.2M</span>
-                    <span class="stat-label">Подписчики</span>
-                </div>
-                <div class="stat-item">
-                    <span class="stat-count" id="profile-total-likes">4.8M</span>
-                    <span class="stat-label">Лайки</span>
-                </div>
-            </div>
-
-            <!-- Кнопка редактирования -->
-            <button class="edit-btn">Изменить профиль</button>
-        </div>
-
-        <!-- Переключатель вкладок внутри профиля -->
-        <div class="profile-feed-tabs">
-            <div class="tab-item active" id="tab-my-videos">🔒 Видео</div>
-            <div class="tab-item" id="tab-liked-videos">❤️ Понравилось</div>
-        </div>
-
-        <!-- СЕТКА 1: Твои загруженные ролики -->
-        <div class="video-grid" id="profile-grid">
-            <div class="grid-item" id="grid-empty-msg" style="grid-column: span 3; background: transparent; font-size: 14px; color: #8a8a8f; text-align: center; padding: 40px 0;">
-                У тебя пока нет видео. Нажми [+] и загрузи первое! 😉
-            </div>
-        </div>
-
-        <!-- СЕТКА 2: Понравившиеся ролики (изначально скрыта) -->
-        <div class="video-grid hidden" id="liked-grid">
-            <div class="grid-item" id="liked-empty-msg" style="grid-column: span 3; background: transparent; font-size: 14px; color: #8a8a8f; text-align: center; padding: 40px 0;">
-                Здесь будут видео, которые ты лайкнул! ❤️
-            </div>
-        </div>
-    </div>
-    <!-- ================= ВСПЛЫВАЮЩЕЕ ОКНО РЕДАКТИРОВАНИЯ ================= -->
-    <div id="edit-profile-modal" class="modal-overlay hidden">
-        <div class="modal-content">
-            <h3 class="modal-title">Редактировать профиль</h3>
-            
-            <div class="input-group">
-                <label>Имя</label>
-                <input type="text" id="input-name" placeholder="Введите имя">
-            </div>
-            
-            <div class="input-group">
-                <label>Имя пользователя (тег)</label>
-                <input type="text" id="input-tag" placeholder="Введите тег">
-            </div>
-            
-            <div class="input-group">
-                <label>Эмодзи аватарки</label>
-                <input type="text" id="input-avatar" placeholder="Например: 🔥 или 👑" maxlength="2">
-            </div>
-            
-            <div class="modal-buttons">
-                <button class="modal-btn cancel" id="btn-modal-cancel">Отмена</button>
-                <button class="modal-btn save" id="btn-modal-save">Сохранить</button>
-            </div>
-        </div>
-    </div>
-
-    <!-- ================= ШТОРКА КОММЕНТАРИЕВ (TIKTOK STYLE) ================= -->
-    <div id="comments-sheet" class="comments-overlay hidden">
-        <div class="comments-content">
-            <!-- Шапка шторки с кнопкой закрытия -->
-            <div class="comments-header">
-                <span>Комментарии (<span id="comments-count-title">0</span>)</span>
-                <button id="btn-comments-close">✕</button>
-            </div>
-            
-            <!-- Список самих комментариев -->
-            <div class="comments-list" id="comments-list-box">
-                <!-- Если комментов нет, покажем заглушку -->
-                <div class="no-comments-msg" id="comments-empty-msg">
-                    Будьте первым, кто оставит комментарий! 💬
-                </div>
-            </div>
-            
-            <!-- Поле ввода внизу шторки -->
-            <div class="comments-input-area">
-                <input type="text" id="input-comment-text" placeholder="Добавить комментарий...">
-                <button id="btn-comment-send">▲</button>
-            </div>
-        </div>
-    </div>
-
-    <!-- ================= НИЖНЕЕ МЕНЮ НАВИГАЦИИ ================= -->
-    <div class="bottom-nav">
-        <div class="nav-item active" id="btn-home">
-            <span class="nav-icon">🏠</span>
-            <span>Главная</span>
-        </div>
-        <div class="nav-item" onclick="alert('Поиск скоро появится')">
-            <span class="nav-icon">🔍</span>
-            <span>Интересное</span>
-        </div>
+    <!-- Основной контейнер приложения -->
+    <div id="app-container">
         
-        <!-- КНОПКА ПЛЮС: Избавлен от ломающих вложенных тегов, реагирует на клик через JS -->
-        <div class="nav-item" id="plus-btn">
-            <div class="nav-create">+</div>
+        <!-- ЛЕНТА ВИДЕО (Главный экран) -->
+        <div id="video-feed" class="page-section active">
+            <!-- Сюда JavaScript будет динамически добавлять видео-карточки -->
         </div>
-        
-        <div class="nav-item" onclick="alert('Входящие пусты')">
-            <span class="nav-icon">⚡</span>
-            <span>Входящие</span>
+
+        <!-- ПРОФИЛЬ ПОЛЬЗОВАТЕЛЯ -->
+        <div id="profile-section" class="page-section" style="display: none;">
+            <div class="profile-header">
+                <div class="profile-avatar">👤</div>
+                <div class="profile-tag">@dimka_0770</div>
+                <div class="profile-bio">Разработчик Tyk Tyk Clone 🚀</div>
+            </div>
+            <!-- Сетка с загруженными видео -->
+            <div id="profile-grid">
+                <div id="grid-empty-msg" style="color: #aaa; text-align: center; padding: 20px;">Здесь будут ваши видео</div>
+            </div>
         </div>
-        <div class="nav-item" id="btn-profile">
-            <span class="nav-icon">👤</span>
-            <span>Профиль</span>
-        </div>
+
     </div>
 
-    <!-- НАСТОЯЩИЙ ИНПУТ: Лежит отдельно, полностью легален для iOS WebKit, скрыт от дизайна -->
+    <!-- СКРЫТЫЙ ИНПУТ ДЛЯ ВЫБОРА ФАЙЛА (Обязателен для работы галереи на iOS) -->
     <input type="file" id="video-upload-input" accept="video/*" style="display: none;">
+    <!-- НИЖНЯЯ ПАНЕЛЬ НАВИГАЦИИ -->
+    <div id="bottom-nav">
+        <div class="nav-btn active" id="btn-home">
+            <span class="nav-icon">🏠</span>
+            <span class="nav-text">Главная</span>
+        </div>
+        <div class="nav-btn">
+            <span class="nav-icon">🔍</span>
+            <span class="nav-text">Интересное</span>
+        </div>
+        
+        <!-- Центральная кнопка загрузки [+] -->
+        <div class="nav-btn plus-container" id="plus-btn">
+            <div class="plus-icon-box">+</div>
+        </div>
+        
+        <div class="nav-btn">
+            <span class="nav-icon">⚡</span>
+            <span class="nav-text">Входящие</span>
+        </div>
+        <div class="nav-btn" id="btn-profile">
+            <span class="nav-icon">👤</span>
+            <span class="nav-text">Профиль</span>
+        </div>
+    </div>
 
-    <!-- ПОДКЛЮЧАЕМ Облачную Конфигурацию Supabase как Модуль (для импорта esm.sh CDN) -->
-    <script type="module" src="./supabase-config.js"></script>
+    <!-- ==================== ИСПРАВЛЕННОЕ ПОДКЛЮЧЕНИЕ СКРИПТОВ ==================== -->
     
-    <!-- ПОДКЛЮЧАЕМ ОСТАЛЬНЫЕ СЦЕНАРИИ КАК ОБЫЧНЫЕ СКРИПТЫ ДЛЯ СТАБИЛЬНОСТИ PWA И СЕТИ НА IOS -->
-    <script src="./app.js"></script>
-    <script src="./profile.js"></script>
-    <script src="./likes.js"></script>
-    <!-- <script src="./likes.js"></script> -->
-    <!-- <script src="./comments.js"></script> -->  
+    <!-- 1. Сначала загружаем официальное ядро SDK Supabase с CDN -->
+    <script src="https://jsdelivr.net"></script>
+
+    <!-- 2. Затем файл вашей конфигурации с правильным URL проекта -->
+    <script src="supabase-config.js"></script>
+
+    <!-- 3. И в самом конце подключаем логику приложения app.js -->
+    <script src="app.js"></script>
+
+    <!-- Регистрация Service Worker для PWA (если необходима) -->
+    <script>
+        if ('serviceWorker' in navigator) {
+            navigator.serviceWorker.register('service-worker.js')
+                .then(() => console.log('Service Worker успешно зарегистрирован!'))
+                .catch((err) => console.log('Ошибка Service Worker:', err));
+        }
+    </script>
 </body>
 </html>
